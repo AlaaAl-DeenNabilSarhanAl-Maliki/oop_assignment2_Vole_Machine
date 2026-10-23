@@ -1,5 +1,5 @@
 @startuml
-title Vole Machine - Draft v0.4
+title Vole Machine - Draft v0.5
 
 enum StepStatus {
   OK
