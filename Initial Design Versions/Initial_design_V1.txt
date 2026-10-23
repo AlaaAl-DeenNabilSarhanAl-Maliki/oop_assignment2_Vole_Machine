@@ -1,0 +1,227 @@
+@startuml
+title Vole Machine - Initial Design v1
+
+enum StepStatus {
+  OK
+  HALTED
+  INVALID_INSTRUCTION
+}
+
+class Machine {
+  - cpu : CPU
+  - memory : Memory
+  - screen : Screen
+  - loader : ProgramLoader
+  - decoder : InstructionDecoder
+  - menu : Menu
+  + start()
+}
+
+class Menu {
+  + mainLoop()
+  + showMainMenu()
+  + loadProgram()
+  + runAll()
+  + runStep()
+  + editRegister()
+  + editMemory()
+  + showState()
+  + askExitOrLoad()
+}
+
+class Screen {
+  - output : string
+  + showMemory(m : Memory)
+  + showRegisters(c : CPU)
+  + showPCAndIR(c : CPU)
+  + appendOutput(value : int)
+  + showOutput()
+  + clearOutput()
+}
+
+class ProgramLoader {
+  - lastError : string
+  + load(file : string, start : int, m : Memory) : bool
+  + getLastError() : string
+  - isEvenAddress(a : int) : bool
+  - cleanLine(line : string) : string
+}
+
+class CPU {
+  - registers : Register[16]
+  - pc : ProgramCounter
+  - ir : InstructionRegister
+  - alu : ALU
+  - cu : CU
+  - halted : bool
+  + getRegister(i : int) : Register
+  + getPC() : ProgramCounter
+  + getIR() : InstructionRegister
+  + getMemory() : Memory
+  + getScreen() : Screen
+  + halt()
+  + isHalted() : bool
+}
+
+class CU {
+  + step() : StepStatus
+  + runAll() : StepStatus
+  - fetch()
+}
+
+class ALU {
+  + addInt(a : int, b : int) : int
+  + addFloat(a : int, b : int) : int
+  + bitOr(a : int, b : int) : int
+  + bitAnd(a : int, b : int) : int
+  + bitXor(a : int, b : int) : int
+  + rotateRight(v : int, n : int) : int
+}
+
+class Memory {
+  - cells : int[256]
+  + read(address : int) : int
+  + write(address : int, value : int)
+}
+
+class Register {
+  # value : int
+  # sizeInBits : int
+  + getValue() : int
+  + setValue(v : int)
+}
+class ProgramCounter {
+  + increment(n : int)
+}
+class InstructionRegister {
+  + getOpcode() : int
+}
+Register <|-- ProgramCounter
+Register <|-- InstructionRegister
+
+abstract class Instruction {
+  # opcode : int
+  # n1 : int
+  # n2 : int
+  # n3 : int
+  # xy() : int
+  + {abstract} isValid() : bool
+  + {abstract} execute(cpu : CPU)
+}
+
+class InstructionDecoder {
+  + decode(code : int) : Instruction
+}
+
+class LoadMemInstruction <<op 1 : RXY>> {
+  + isValid() : bool
+  + execute(cpu : CPU)
+}
+class LoadImmInstruction <<op 2 : RXY>> {
+  + isValid() : bool
+  + execute(cpu : CPU)
+}
+class StoreInstruction <<op 3 : RXY>> {
+  + isValid() : bool
+  + execute(cpu : CPU)
+}
+class MoveInstruction <<op 4 : 0RS>> {
+  + isValid() : bool
+  + execute(cpu : CPU)
+}
+class AddIntInstruction <<op 5 : RST>> {
+  + isValid() : bool
+  + execute(cpu : CPU)
+}
+class AddFloatInstruction <<op 6 : RST>> {
+  + isValid() : bool
+  + execute(cpu : CPU)
+}
+class OrInstruction <<op 7 : RST>> {
+  + isValid() : bool
+  + execute(cpu : CPU)
+}
+class AndInstruction <<op 8 : RST>> {
+  + isValid() : bool
+  + execute(cpu : CPU)
+}
+class XorInstruction <<op 9 : RST>> {
+  + isValid() : bool
+  + execute(cpu : CPU)
+}
+class RotateInstruction <<op A : R0X>> {
+  + isValid() : bool
+  + execute(cpu : CPU)
+}
+class JumpInstruction <<op B : RXY>> {
+  + isValid() : bool
+  + execute(cpu : CPU)
+}
+class HaltInstruction <<op C : 000>> {
+  + isValid() : bool
+  + execute(cpu : CPU)
+}
+
+Instruction <|-- LoadMemInstruction
+Instruction <|-- LoadImmInstruction
+Instruction <|-- StoreInstruction
+Instruction <|-- MoveInstruction
+Instruction <|-- AddIntInstruction
+Instruction <|-- AddFloatInstruction
+Instruction <|-- OrInstruction
+Instruction <|-- AndInstruction
+Instruction <|-- XorInstruction
+Instruction <|-- RotateInstruction
+Instruction <|-- JumpInstruction
+Instruction <|-- HaltInstruction
+
+note right of JumpInstruction
+  Jump if reg[R] == reg[0]
+  then PC = XY (XY must be even)
+end note
+note right of StoreInstruction
+  If XY == FF the value goes
+  to Screen, not to Memory
+end note
+note right of InstructionDecoder
+  opcodes 0, D, E, F
+  are invalid (returns null)
+end note
+
+' ---- Composition ----
+Machine *-- CPU
+Machine *-- Memory
+Machine *-- Screen
+Machine *-- ProgramLoader
+Machine *-- InstructionDecoder
+Machine *-- Menu
+CPU "1" *-- "16" Register
+CPU *-- ProgramCounter
+CPU *-- InstructionRegister
+CPU *-- ALU
+CPU *-- CU
+
+' ---- Association ----
+Menu --> Machine : commands
+CPU --> Memory : reads/writes
+CPU --> Screen : output at FF
+CU --> CPU : controls
+CU --> InstructionDecoder : uses
+
+' ---- Dependency ----
+Menu ..> StepStatus
+CU ..> StepStatus : returns
+CU ..> Instruction : runs
+ProgramLoader ..> Memory : writes
+ProgramLoader ..> InstructionDecoder : validates
+Screen ..> Memory : displays
+Screen ..> CPU : displays
+InstructionDecoder ..> Instruction : creates
+Instruction ..> CPU : executes on
+AddIntInstruction ..> ALU : uses
+AddFloatInstruction ..> ALU : uses
+OrInstruction ..> ALU : uses
+AndInstruction ..> ALU : uses
+XorInstruction ..> ALU : uses
+RotateInstruction ..> ALU : uses
+@enduml
