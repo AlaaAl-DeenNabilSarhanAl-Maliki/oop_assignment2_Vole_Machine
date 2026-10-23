@@ -1,0 +1,289 @@
+=====================================================================
+DESIGN RATIONALE (DRAFT)
+Vole Machine Simulator - Initial Design v1
+=====================================================================
+
+
+1. GENERAL APPROACH
+---------------------------------------------------------------------
+
+1.1 Goal
+Design a simulator for the Vole machine that covers all the functions
+required by the assignment: a menu, loading a program from a file into
+an even memory address, editing registers and memory cells, setting the
+PC, displaying the machine state, the Fetch/Decode/Execute cycle,
+running the whole program or step by step, displaying the screen,
+rejecting invalid instructions, and asking the user whether to exit or
+load another program.
+
+1.2 Guiding principle: a design model, not a copy of reality
+A class represents a RESPONSIBILITY, not necessarily a physical part of
+the machine. For example, in a real machine an instruction is just
+data, but we give it behavior (execute) because this organizes the code
+better. We also added classes that do not exist in the real hardware
+(ProgramLoader, InstructionDecoder, Menu) because each has a clear
+responsibility.
+
+Reason: the goal of the assignment is to learn OOP modeling and design,
+so the quality criterion is how easy the design is to understand,
+modify and test, not how closely it mirrors the hardware.
+
+1.3 Criteria used to judge each class
+  1. Its responsibility can be described in one sentence (Single
+     Responsibility).
+  2. Changing something requires modifying only one place (Low
+     Coupling).
+  3. Its existence can be justified.
+
+1.4 Working style: incremental versions
+We did not aim for a perfect design from the start. We developed the
+design in versions and deliberately left some points open. The target
+was a COMPLETE design (every required function has a place), not a
+perfect one.
+
+
+2. DESIGN DECISIONS AND THEIR REASONS
+---------------------------------------------------------------------
+
+Decision 1: Machine as the coordinator
+  Problem:  Who assembles the parts and runs them together?
+  Decision: Machine owns (Composition) the CPU, Memory, Screen,
+            ProgramLoader, InstructionDecoder and Menu.
+  Reason:   One single point creates the components and connects them,
+            so no component needs to create the others. Memory and
+            Screen have one owner, and other classes access them
+            through references.
+
+Decision 2: Separating Menu from Screen
+  Problem:  Where do we put user interaction, and where do we put
+            display?
+  Decision: Menu receives the user's choices and contains the main
+            loop (mainLoop). Screen contains all the display logic
+            (memory as a matrix, IR, PC, registers, and program
+            output). The menu gives the command and the screen does
+            the displaying. Menu also offers editRegister and
+            editMemory.
+  Reason:   Separates INPUT from OUTPUT. If the display changes (for
+            example in a later GUI version), the menu logic is not
+            touched. The two edit options cover requirement 3 of the
+            assignment.
+  Note:     Placing the main loop in Menu is a preliminary decision
+            that may be revisited.
+
+Decision 3: Register as the parent of ProgramCounter and
+            InstructionRegister
+  Problem:  PC, IR and the general registers all store a bit pattern.
+  Decision: Register is the parent class. ProgramCounter inherits it
+            and adds increment. InstructionRegister inherits it and
+            adds getOpcode.
+  Reason:   A genuine is-a relationship, and the additions in the two
+            children justify the inheritance.
+  Resulting problem: General registers and the PC are 8 bits, while
+            the IR is 16 bits.
+  Solution: A sizeInBits attribute in the parent restricts the value
+            in setValue.
+
+Decision 4: Memory with 256 cells
+  Decision: Memory contains cells[256] and only read and write.
+  Reason:   A single responsibility: storage. It knows nothing about
+            instructions or the screen.
+  Note:     Writing to address FF does not reach memory but the screen
+            (see Decision 10).
+
+Decision 5: Instruction hierarchy (Inheritance + Polymorphism)
+  Problem:  There are 12 kinds of instructions, each with different
+            logic.
+  Options:  (a) One huge switch in a single place.
+            (b) One class per instruction inheriting from an abstract
+                parent.
+  Decision: Option (b): abstract Instruction with 12 children. Each
+            child has isValid and execute.
+  Reason:   Adding a new instruction does not change existing code
+            (Open/Closed Principle). Each instruction carries its own
+            logic and validity rules. Each instruction can be tested
+            on its own.
+
+Decision 6: InstructionDecoder (Factory pattern)
+  Problem:  Who converts the code 2005 into a LoadImmInstruction
+            object?
+  Decision: A separate class, InstructionDecoder.decode(code), reads
+            the opcode and creates the right object. It returns null
+            for unknown opcodes (0, D, E, F).
+  Reason:   Separates the responsibility of RECOGNIZING and CREATING an
+            instruction from the responsibility of EXECUTING it.
+
+Decision 7: Instructions execute themselves; CU manages the cycle
+  Problem:  Should execution be inside the instruction or inside the
+            CU?
+  Options:  (a) The instruction executes everything and the CU is
+                removed.
+            (b) The CU executes, and the instruction is only data.
+            (c) Hybrid.
+  Decision: Hybrid. Each instruction implements execute(cpu). The CU
+            manages the cycle (step, runAll, fetch).
+  Reason:   (a) removes the role of the CU and makes the CPU too big.
+            (b) brings back the huge switch and removes the benefit of
+            polymorphism. The hybrid keeps a real role for each.
+  Cost:     An instruction needs access to many components, so it
+            receives the CPU as a parameter to avoid holding many
+            references.
+
+Decision 8: Separate ProgramLoader
+  Decision: A class responsible for reading the file (ignoring ;
+            comments and empty lines), checking that the start address
+            is even, validating the instructions, and writing them to
+            Memory.
+  Reason:   Keeps file reading and validation out of Machine, so it
+            does not become too big, and makes loading testable on its
+            own.
+
+Decision 9: Rejecting invalid programs at load time
+  Problem:  When do we reject a program that contains invalid
+            instructions?
+  Options:  At execution time (to avoid duplicated logic), or at load
+            time.
+  Decision: At LOAD time, keeping a backup check at execution time.
+  Reason:   (1) The assignment says the simulator should reject
+            programs with invalid instructions. Rejecting after half
+            of the program has run is not a rejection. (2) There is no
+            real duplication, because isValid() is separate from
+            execute(), so the loader can call it without executing
+            anything. (3) The execution-time check remains because
+            the user may edit memory manually, or a JUMP may land on
+            data.
+
+Decision 10: Reporting rejection, and the screen output
+  Reporting: Return values. load() returns bool, with getLastError()
+            giving the line number and reason. step() returns an enum
+            StepStatus (OK, HALTED, INVALID_INSTRUCTION).
+  Reason:   Simpler than exceptions at this stage and enough for a
+            project of this size.
+  Screen:   Screen.output stores what was written to the screen and it
+            is displayed after the program finishes (or after each
+            step), as the assignment requires.
+  FF:       StoreInstruction checks whether XY == FF and sends the
+            value to the Screen instead of Memory, so Memory stays
+            simple and does not know the screen.
+  Note:     Preliminary decision: the value is written to the screen
+            only, not to cell FF.
+
+Decision 11: ALU with separate functions
+  Decision: ALU contains addInt, addFloat, bitOr, bitAnd, bitXor and
+            rotateRight. The floating-point logic is a separate
+            function inside ALU.
+  Reason:   ALU gathers the arithmetic and logic operations so
+            instructions do not repeat them. Interpreting a register
+            as floating point (sign + exponent + mantissa) is very
+            different from integer addition, so it deserves its own
+            function.
+
+Decision 12: Progress of execution is controlled by the CU
+  Problem:  Who controls how execution advances (run all / one step):
+            the CU or the Menu?
+  Decision: Preliminarily the CU (step and runAll). The Menu only
+            requests them and then asks the Screen to display.
+  Reason:   Keeps the Fetch/Decode/Execute loop in one place.
+  Note:     This needs further thought and may change.
+
+
+3. CHOICE OF RELATIONSHIPS BETWEEN CLASSES
+---------------------------------------------------------------------
+
+Composition:  Machine -> its components; CPU -> 16 registers, PC, IR,
+              ALU, CU.
+              The whole creates and destroys its parts, and they have
+              no meaning without it.
+
+Association:  CPU -> Memory, CPU -> Screen, CU -> CPU, Menu -> Machine.
+              A permanent reference without ownership. The owner of
+              Memory and Screen is Machine.
+
+Dependency:   ProgramLoader -> Memory, Instruction -> CPU,
+              Screen -> Memory.
+              Used only as a parameter or local variable.
+
+Inheritance:  Register -> ProgramCounter, InstructionRegister;
+              Instruction -> the 12 instruction classes.
+              A genuine is-a relationship.
+
+
+4. VERSION HISTORY
+---------------------------------------------------------------------
+
+v0.1  First list of classes: Machine, Screen, Menu, Instruction,
+      Decoder, Memory, Register, ALU, CU, CPU.
+
+v0.2  Added ProgramLoader; edit register/memory options in Menu;
+      display split between Menu and Screen; hybrid execution model;
+      load/store moved from CU into the instructions; execute(cpu)
+      added.
+
+v0.5  (v0.3/0.4 was skipped because the changes were large.) Rejection at
+      load time; return values for reporting; StepStatus; output kept
+      in Screen.
+
+v1    Details of the 12 instructions (format of each and its validity
+      rules); getMemory and getScreen added to CPU. First version that
+      covers all required functions.
+
+Notes on versioning:
+  - Only v0.5 and v1 were documented (committed) in the repository.
+    The earlier versions (v0.1, v0.2, v0.4) were working drafts and
+    are described here from our design discussions.
+  - Why we jumped from v0.5 to v1: v0.5 still had the details of the
+    12 instructions postponed. Once these details were added, every
+    function required by the assignment had a responsible class and
+    method, so the design became complete and integrated. We
+    therefore considered it a full initial design and named it v1
+    instead of v0.6.
+  - During this phase we discussed with an AI the question of whether
+    an instruction should execute itself or whether a switch should
+    handle all instructions. However, we decided the initial design
+    ourselves.
+
+
+5. OPEN POINTS
+---------------------------------------------------------------------
+
+The following points were debated inside the team and were left open
+deliberately, since we expected them to be discussed with the AIs:
+
+  1. Distribution of responsibilities between CPU and CU. The CPU may
+     become only a container. Options include moving register access
+     to the CU, or making the CPU a facade with methods such as
+     writeMemory that decide whether FF goes to the screen.
+  2. Who controls the progress of execution: CU or Menu.
+  3. The circular reference between CPU and CU.
+  4. The display format of the screen (hex, decimal or character).
+  5. Whether a write to FF goes to the screen only or to cell FF too.
+  6. Repeated steps among instructions 5-9 (read S and T, compute,
+     write R).
+  7. Additional checks such as a program exceeding memory bounds at
+     load time.
+
+Note: this list does NOT limit future development to these points
+only. These are the points that were discussed within the team and
+that we took into account as likely subjects of discussion with the
+AIs. Any other part of the design may also be improved.
+
+
+6. MAPPING ASSIGNMENT REQUIREMENTS TO CLASSES
+---------------------------------------------------------------------
+
+  Menu and main loop ................. Menu
+  Load from file to even address ..... ProgramLoader
+  Edit a register or a cell .......... Menu (calls Register / Memory)
+  Set PC to program start ............ Machine (via ProgramCounter)
+  Display memory, IR, PC, registers .. Screen
+  Fetch .............................. CU
+  Decode and validation .............. InstructionDecoder and
+                                       Instruction.isValid()
+  Execute ............................ Instruction.execute()
+  Run all / Step ..................... CU (requested by Menu)
+  Screen display ..................... Screen
+  Reject invalid instructions ........ ProgramLoader at load time,
+                                       CU as a backup
+  Ask to exit or load another ........ Menu
+
+
+BY: MOHAMMED AL-SOFI
