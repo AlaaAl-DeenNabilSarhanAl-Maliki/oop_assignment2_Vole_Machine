@@ -216,4 +216,76 @@ class Cpu{
 
 };
 
+class ProgramLoader {
+    private:
+        const InstructionDecoder& decoder;
+        bool readWords(std::string path, std::vector<uint16_t>& words,LoadResult& result );
+        bool ParseHexWord(std::string text, uint16_t& word);
+        bool validateAll(const std::vector<uint16_t>& words, int startAddrerss, LoadResult& result);
+    
+    public:
+        ProgramLoader(const InstructionDecoder& decoder);
+        LoadResult load(std::string, int startAddress, Memory& memory);
+
+};
+
+class Machine {
+    private:
+        Screen screen;
+        Memory memory;
+        InstructionDecoder decoder;
+        Cpu cpu;
+        ProgramLoader loader;
+    
+    public:
+        Machine();
+        LoadResult loadProgram(std::string, int startAddress);
+        bool setProgramCounter(uint8_t address);
+        bool writeRegister(uint8_t index, uint8_t value);
+        void writeMemory(uint8_t address, uint8_t value);
+        StepStatus step();
+        StepStatus runAll(int maxSteps = 100000);
+        void reset();
+        const Memory& getMeomry();
+        const Screen& getScreen();
+        const Cpu& getCpu();
+
+};
+class ConsoleView {
+public:
+    void showState(const Machine& machine);
+    void showMemory(const Memory& memory);
+    void showRegisters(const Cpu& cpu);
+    void showScreen(const Screen& screen);
+    void showStatus(StepStatus status);
+    void showLoadResult(const LoadResult& result);
+
+private:
+    std::string toHex(int value, int digits);
+};
+
+class ConsoleUI {
+private:
+    Machine& machine;
+    ConsoleView view;
+
+public:
+    ConsoleUI(Machine& machine);
+    void run();
+
+private:
+    void showMenu();
+    void handleLoadProgram();
+    void handleSetProgramCounter();
+    void handleEditRegister();
+    void handleEditMemory();
+    void handleDisplayState();
+    void handleExecute();
+    void runAtOnce();
+    void runStepByStep();
+    void waitForEnter();
+    bool askExitOrLoadAnother();
+    int readHexValue(std::string prompt, int maxValue);
+};
+
 #endif
