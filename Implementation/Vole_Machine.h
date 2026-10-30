@@ -8,8 +8,6 @@
 #include<map>
 #include<functional>
 
-class Cpu;
-class Instruction;
 
 using InstructionCreator =
         std::function<std::unique_ptr<Instruction>(uint16_t)>;
