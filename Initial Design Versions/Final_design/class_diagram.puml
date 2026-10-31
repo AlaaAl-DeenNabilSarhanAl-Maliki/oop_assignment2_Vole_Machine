@@ -1,0 +1,279 @@
+@startuml VoleMachineSimulator
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+hide empty members
+
+' ===================== UI LAYER =====================
+class ConsoleUI {
+  -machine : Machine&
+  -view : ConsoleView
+  +ConsoleUI(machine : Machine&)
+  +run() : void
+  -showMenu() : void
+  -handleLoadProgram() : void
+  -handleSetProgramCounter() : void
+  -handleEditRegister() : void
+  -handleEditMemory() : void
+  -handleDisplayState() : void
+  -handleExecute() : void
+  -runAtOnce() : void
+  -runStepByStep() : void
+  -askExitOrLoadAnother() : bool
+  -readHexValue(prompt : string) : int
+}
+
+class ConsoleView {
+  +showState(machine : const Machine&) : void
+  +showMemory(memory : const Memory&) : void
+  +showRegisters(cpu : const Cpu&) : void
+  +showScreen(screen : const Screen&) : void
+  +showStatus(status : StepStatus) : void
+  +showLoadResult(result : const LoadResult&) : void
+  -toHex(value : int, digits : int) : string
+}
+
+' ===================== FACADE =====================
+class Machine {
+  -screen : Screen
+  -memory : Memory
+  -decoder : InstructionDecoder
+  -cpu : Cpu
+  -loader : ProgramLoader
+  +Machine()
+  +loadProgram(path : string, startAddress : uint8_t) : LoadResult
+  +setProgramCounter(address : uint8_t) : void
+  +writeRegister(index : uint8_t, value : uint8_t) : void
+  +writeMemory(address : uint8_t, value : uint8_t) : void
+  +step() : StepStatus
+  +runAll(maxSteps : int = 100000) : StepStatus
+  +reset() : void
+  +getMemory() : const Memory&
+  +getCpu() : const Cpu&
+  +getScreen() : const Screen&
+}
+
+' ===================== HARDWARE =====================
+class Cpu {
+  -registers : RegisterFile
+  -programCounter : uint8_t
+  -instructionRegister : uint16_t
+  -halted : bool
+  -memory : Memory&
+  -decoder : const InstructionDecoder&
+  +Cpu(memory : Memory&, decoder : const InstructionDecoder&)
+  +step() : StepStatus
+  +reset() : void
+  +halt() : void
+  +isHalted() : bool
+  +getRegisters() : RegisterFile&
+  +getRegisters() : const RegisterFile&
+  +getMemory() : Memory&
+  +getProgramCounter() : uint8_t
+  +setProgramCounter(address : uint8_t) : void
+  +getInstructionRegister() : uint16_t
+  -fetch() : uint16_t
+}
+
+class RegisterFile {
+  +{static} COUNT : int = 16
+  -values : uint8_t[16]
+  +get(index : uint8_t) : uint8_t
+  +set(index : uint8_t, value : uint8_t) : void
+  +clear() : void
+}
+
+class Memory {
+  +{static} SIZE : int = 256
+  +{static} SCREEN_ADDRESS : uint8_t = 0xFF
+  -cells : uint8_t[256]
+  -screen : Screen&
+  +Memory(screen : Screen&)
+  +read(address : uint8_t) : uint8_t
+  +write(address : uint8_t, value : uint8_t) : void
+  +clear() : void
+}
+
+class Screen {
+  -output : vector<uint8_t>
+  +write(value : uint8_t) : void
+  +getOutput() : const vector<uint8_t>&
+  +clear() : void
+}
+
+' ===================== INSTRUCTIONS =====================
+abstract class Instruction {
+  -word : uint16_t
+  #Instruction(word : uint16_t)
+  #regR() : uint8_t
+  #regS() : uint8_t
+  #regT() : uint8_t
+  #operandXY() : uint8_t
+  +getWord() : uint16_t
+  +{abstract} execute(cpu : Cpu&) : void
+  +~Instruction()
+}
+
+class LoadFromMemoryInstruction {
+  +{static} create(word : uint16_t) : unique_ptr<Instruction>
+  +execute(cpu : Cpu&) : void
+}
+class LoadImmediateInstruction {
+  +{static} create(word : uint16_t) : unique_ptr<Instruction>
+  +execute(cpu : Cpu&) : void
+}
+class StoreInstruction {
+  +{static} create(word : uint16_t) : unique_ptr<Instruction>
+  +execute(cpu : Cpu&) : void
+}
+class MoveInstruction {
+  +{static} create(word : uint16_t) : unique_ptr<Instruction>
+  +execute(cpu : Cpu&) : void
+}
+
+abstract class BinaryRegisterInstruction {
+  +execute(cpu : Cpu&) : void
+  #{abstract} compute(a : uint8_t, b : uint8_t) : uint8_t
+}
+class AddIntInstruction {
+  +{static} create(word : uint16_t) : unique_ptr<Instruction>
+  #compute(a : uint8_t, b : uint8_t) : uint8_t
+}
+class AddFloatInstruction {
+  +{static} create(word : uint16_t) : unique_ptr<Instruction>
+  #compute(a : uint8_t, b : uint8_t) : uint8_t
+}
+class OrInstruction {
+  +{static} create(word : uint16_t) : unique_ptr<Instruction>
+  #compute(a : uint8_t, b : uint8_t) : uint8_t
+}
+class AndInstruction {
+  +{static} create(word : uint16_t) : unique_ptr<Instruction>
+  #compute(a : uint8_t, b : uint8_t) : uint8_t
+}
+class XorInstruction {
+  +{static} create(word : uint16_t) : unique_ptr<Instruction>
+  #compute(a : uint8_t, b : uint8_t) : uint8_t
+}
+
+class RotateInstruction {
+  +{static} create(word : uint16_t) : unique_ptr<Instruction>
+  +execute(cpu : Cpu&) : void
+}
+class JumpInstruction {
+  +{static} create(word : uint16_t) : unique_ptr<Instruction>
+  +execute(cpu : Cpu&) : void
+}
+class HaltInstruction {
+  +{static} create(word : uint16_t) : unique_ptr<Instruction>
+  +execute(cpu : Cpu&) : void
+}
+
+class Alu <<utility>> {
+  +{static} addInt(a : uint8_t, b : uint8_t) : uint8_t
+  +{static} addFloat(a : uint8_t, b : uint8_t) : uint8_t
+  +{static} bitOr(a : uint8_t, b : uint8_t) : uint8_t
+  +{static} bitAnd(a : uint8_t, b : uint8_t) : uint8_t
+  +{static} bitXor(a : uint8_t, b : uint8_t) : uint8_t
+  +{static} rotateRight(value : uint8_t, times : uint8_t) : uint8_t
+  -{static} floatToDouble(bits : uint8_t) : double
+  -{static} doubleToFloat(value : double) : uint8_t
+}
+
+class InstructionDecoder {
+  -creators : map<uint8_t, InstructionCreator>
+  +InstructionDecoder()
+  +registerInstruction(opcode : uint8_t, creator : InstructionCreator) : void
+  +decode(word : uint16_t) : unique_ptr<Instruction>
+  +isValid(word : uint16_t) : bool
+}
+
+' ===================== LOADING =====================
+class ProgramLoader {
+  -decoder : const InstructionDecoder&
+  +ProgramLoader(decoder : const InstructionDecoder&)
+  +load(path : string, startAddress : uint8_t, memory : Memory&) : LoadResult
+  -readWords(path : string, words : vector<uint16_t>&, result : LoadResult&) : bool
+  -parseHexWord(text : string, word : uint16_t&) : bool
+}
+
+class LoadResult <<struct>> {
+  +success : bool
+  +lineNumber : int
+  +message : string
+  +wordsLoaded : int
+}
+
+enum StepStatus {
+  OK
+  HALTED
+  INVALID_INSTRUCTION
+  STEP_LIMIT_REACHED
+}
+
+note right of Memory
+  write(0xFF, v) forwards v to the Screen
+  and does not store it in cells.
+  read(0xFF) returns 0 (assumption).
+end note
+
+note bottom of InstructionDecoder
+  InstructionCreator = function(word) returning
+  unique_ptr<Instruction>, or nullptr when the
+  unused digits are wrong. Each concrete class
+  provides one (static create) and the decoder
+  registers it for its opcode.
+end note
+
+' ===================== RELATIONSHIPS =====================
+ConsoleUI "1" *-- "1" ConsoleView
+ConsoleUI "1" --> "1" Machine : drives
+ConsoleView ..> Machine : reads
+ConsoleView ..> Memory
+ConsoleView ..> Cpu
+ConsoleView ..> Screen
+ConsoleView ..> StepStatus
+ConsoleView ..> LoadResult
+
+Machine "1" *-- "1" Screen
+Machine "1" *-- "1" Memory
+Machine "1" *-- "1" InstructionDecoder
+Machine "1" *-- "1" Cpu
+Machine "1" *-- "1" ProgramLoader
+Machine ..> LoadResult
+Machine ..> StepStatus
+
+Cpu "1" *-- "1" RegisterFile
+Cpu "1" --> "1" Memory
+Cpu "1" --> "1" InstructionDecoder
+Cpu ..> Instruction : creates / executes
+Cpu ..> StepStatus
+Memory "1" --> "1" Screen
+
+ProgramLoader "1" --> "1" InstructionDecoder
+ProgramLoader ..> Memory : writes
+ProgramLoader ..> LoadResult
+
+InstructionDecoder ..> Instruction : creates
+Instruction ..> Cpu : execute(cpu)
+
+Instruction <|-- LoadFromMemoryInstruction
+Instruction <|-- LoadImmediateInstruction
+Instruction <|-- StoreInstruction
+Instruction <|-- MoveInstruction
+Instruction <|-- BinaryRegisterInstruction
+Instruction <|-- RotateInstruction
+Instruction <|-- JumpInstruction
+Instruction <|-- HaltInstruction
+BinaryRegisterInstruction <|-- AddIntInstruction
+BinaryRegisterInstruction <|-- AddFloatInstruction
+BinaryRegisterInstruction <|-- OrInstruction
+BinaryRegisterInstruction <|-- AndInstruction
+BinaryRegisterInstruction <|-- XorInstruction
+
+AddIntInstruction ..> Alu
+AddFloatInstruction ..> Alu
+OrInstruction ..> Alu
+AndInstruction ..> Alu
+XorInstruction ..> Alu
+RotateInstruction ..> Alu
+@enduml
