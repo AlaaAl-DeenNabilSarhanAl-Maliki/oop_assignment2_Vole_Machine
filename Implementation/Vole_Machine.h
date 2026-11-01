@@ -8,6 +8,9 @@
 #include<map>
 #include<functional>
 
+// Forward declarations (needed because these types are used before their definitions)
+class Instruction;
+class Cpu;
 
 using InstructionCreator =
         std::function<std::unique_ptr<Instruction>(uint16_t)>;
@@ -29,7 +32,7 @@ struct LoadResult {
 class RegisterFile {
     public:
         static constexpr int count = 16;
-        uint8_t get(uint8_t index);
+        uint8_t get(uint8_t index) const;
         void set(uint8_t index, uint8_t value);
         void clear();
     
@@ -45,7 +48,7 @@ class Screen{
 
     public:
         void write(uint8_t value);
-        const std::vector<uint8_t>& getOutput();
+        const std::vector<uint8_t>& getOutput() const;
         void clear();
 };
 
@@ -56,10 +59,10 @@ class Memory{
         Memory(Screen& screen);
         static constexpr int Size = 256;
         static constexpr uint8_t screenAddress = 0xFF; 
-        static bool isEvenAddress(int adresss) ;
+        static bool isEvenAddress(int address) ;
         static bool fits (int start, int byteCount);
-        void write(uint8_t address, uint8_t vlaue);
-        uint8_t read(uint8_t address);
+        void write(uint8_t address, uint8_t value);
+        uint8_t read(uint8_t address) const;
         bool loadBytes(int start, const std::vector<uint8_t>& bytes);
         void clear();
     
@@ -74,95 +77,108 @@ class Instruction {
         uint16_t word;
 
     protected:
-        Instruction(uint16_t word): word(word){};
-        uint8_t regR();
-        uint8_t regS();
-        uint8_t regT();
-        uint8_t operandXY();
+        Instruction(uint16_t word): word(word){}
+        uint8_t regR() const;
+        uint8_t regS() const;
+        uint8_t regT() const;
+        uint8_t operandXY() const;
     public:
-        uint16_t getWord();
+        uint16_t getWord() const;
         virtual void execute(Cpu& cpu) = 0;
-        virtual ~Instruction() = 0;
+        virtual ~Instruction() = default;
 
 };
 
 class LoadFromMemoryInstruction: public Instruction {
     public:
+        explicit LoadFromMemoryInstruction(uint16_t word): Instruction(word) {}
         static std::unique_ptr<Instruction> create (uint16_t word);
-        void execute(Cpu& cpu);
+        void execute(Cpu& cpu) override;
 };
 
 class LoadImmediateInstruction:public Instruction {
     public:
+        explicit LoadImmediateInstruction(uint16_t word): Instruction(word) {}
         static std::unique_ptr<Instruction> create (uint16_t word);
-        void execute(Cpu& cpu);
+        void execute(Cpu& cpu) override;
 };
 
 class StoreInstruction: public Instruction {
     public:
+        explicit StoreInstruction(uint16_t word): Instruction(word) {}
         static std::unique_ptr<Instruction> create (uint16_t word);
-        void execute(Cpu& cpu);
+        void execute(Cpu& cpu) override;
 };
 
 class MoveInstruction:public Instruction {
     public:
+        explicit MoveInstruction(uint16_t word): Instruction(word) {}
         static std::unique_ptr<Instruction> create (uint16_t word);
-        void execute(Cpu& cpu);
+        void execute(Cpu& cpu) override;
 };
 
 class JumpInstruction:public Instruction {
     public:
+        explicit JumpInstruction(uint16_t word): Instruction(word) {}
         static std::unique_ptr<Instruction> create (uint16_t word);
-        void execute(Cpu& cpu);
+        void execute(Cpu& cpu) override;
 };
 
 class RotationInstruction:public Instruction {
     public:
+        explicit RotationInstruction(uint16_t word): Instruction(word) {}
         static std::unique_ptr<Instruction> create (uint16_t word);
-        void execute(Cpu& cpu);
+        void execute(Cpu& cpu) override;
 };
 
 class HaltInstruction:public Instruction {
     public:
+        explicit HaltInstruction(uint16_t word): Instruction(word) {}
         static std::unique_ptr<Instruction> create (uint16_t word);
-        void execute(Cpu& cpu);
+        void execute(Cpu& cpu) override;
 };
 
 class BinaryRegisterInstruction:public Instruction {
     public:
-        void execute(Cpu& cpu);
+        void execute(Cpu& cpu) override;
     protected:
+        explicit BinaryRegisterInstruction(uint16_t word): Instruction(word) {}
         virtual uint8_t compute(uint8_t a, uint8_t b) = 0;
 };
 
-class AddInstruction: public BinaryRegisterInstruction {
+class AndInstruction: public BinaryRegisterInstruction {
     public:
+        explicit AndInstruction(uint16_t word): BinaryRegisterInstruction(word) {}
         static std::unique_ptr<BinaryRegisterInstruction> create (uint16_t word);
-        uint8_t compute(uint8_t a, uint8_t b);
+        uint8_t compute(uint8_t a, uint8_t b) override;
 };
 
 class XorInstruction: public BinaryRegisterInstruction {
     public:
+        explicit XorInstruction(uint16_t word): BinaryRegisterInstruction(word) {}
         static std::unique_ptr<BinaryRegisterInstruction> create (uint16_t word);
-        uint8_t compute(uint8_t a, uint8_t b);
+        uint8_t compute(uint8_t a, uint8_t b) override;
 };
 
 class OrInstruction: public BinaryRegisterInstruction {
     public:
+        explicit OrInstruction(uint16_t word): BinaryRegisterInstruction(word) {}
         static std::unique_ptr<BinaryRegisterInstruction> create (uint16_t word);
-        uint8_t compute(uint8_t a, uint8_t b);
+        uint8_t compute(uint8_t a, uint8_t b) override;
 };
 
 class AddIntInstruction: public BinaryRegisterInstruction {
     public:
+        explicit AddIntInstruction(uint16_t word): BinaryRegisterInstruction(word) {}
         static std::unique_ptr<BinaryRegisterInstruction> create (uint16_t word);
-        uint8_t compute(uint8_t a, uint8_t b);
+        uint8_t compute(uint8_t a, uint8_t b) override;
 };
 
 class AddFloatInstruction: public BinaryRegisterInstruction {
     public:
+        explicit AddFloatInstruction(uint16_t word): BinaryRegisterInstruction(word) {}
         static std::unique_ptr<BinaryRegisterInstruction> create (uint16_t word);
-        uint8_t compute(uint8_t a, uint8_t b);
+        uint8_t compute(uint8_t a, uint8_t b) override;
 };
 
 class Alu{
@@ -183,8 +199,8 @@ class InstructionDecoder {
     public:
         InstructionDecoder();
         void registerInstruction(uint8_t opcode, InstructionCreator creator);
-        std::unique_ptr<Instruction> decode(uint16_t word);
-        bool isValid(uint16_t word);
+        std::unique_ptr<Instruction> decode(uint16_t word) const;
+        bool isValid(uint16_t word) const;
 };
 class Cpu{
     
@@ -202,15 +218,15 @@ class Cpu{
         StepStatus step();
         void reset();
         void halt();
-        bool isHalted();
-        uint8_t readRregister(uint8_t index);
-        void writeRregister(uint8_t index, uint8_t value);
-        uint8_t readMemory(uint8_t address);
+        bool isHalted() const;
+        uint8_t readRegister(uint8_t index) const;
+        void writeRegister(uint8_t index, uint8_t value);
+        uint8_t readMemory(uint8_t address) const;
         void writeMemory(uint8_t address, uint8_t value);
-        const RegisterFile& getRegisters();
-        uint8_t getProgrammCounter();
-        void setProgrammCounter(uint8_t address);
-        uint16_t getInstructionRegister();
+        const RegisterFile& getRegisters() const;
+        uint8_t getProgramCounter() const;
+        void setProgramCounter(uint8_t address);
+        uint16_t getInstructionRegister() const;
 
 };
 
@@ -219,7 +235,7 @@ class ProgramLoader {
         const InstructionDecoder& decoder;
         bool readWords(std::string path, std::vector<uint16_t>& words,LoadResult& result );
         bool ParseHexWord(std::string text, uint16_t& word);
-        bool validateAll(const std::vector<uint16_t>& words, int startAddrerss, LoadResult& result);
+        bool validateAll(const std::vector<uint16_t>& words, int startAddress, LoadResult& result);
     
     public:
         ProgramLoader(const InstructionDecoder& decoder);
@@ -244,9 +260,9 @@ class Machine {
         StepStatus step();
         StepStatus runAll(int maxSteps = 100000);
         void reset();
-        const Memory& getMeomry();
-        const Screen& getScreen();
-        const Cpu& getCpu();
+        const Memory& getMemory() const;
+        const Screen& getScreen() const;
+        const Cpu& getCpu() const;
 
 };
 class ConsoleView {
