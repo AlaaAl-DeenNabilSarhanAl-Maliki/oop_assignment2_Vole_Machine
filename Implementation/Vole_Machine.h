@@ -194,7 +194,7 @@ class Cpu{
         uint16_t instructionRegister;
         bool halted;
         Memory& memory;
-        const InstructionDecoder& decoder;
+        InstructionDecoder& decoder;
         uint16_t fetch();
     
     public:
