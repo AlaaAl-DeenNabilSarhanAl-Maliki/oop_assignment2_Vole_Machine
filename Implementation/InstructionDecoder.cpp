@@ -20,7 +20,7 @@ void InstructionDecoder::registerInstruction(uint8_t opcode, InstructionCreator 
 };
 
 std::unique_ptr<Instruction> InstructionDecoder::decode(uint16_t word) const {
-    uint8_t opcode = word >> 12; // Right shift by 12 bit 
+    uint8_t opcode = word >> 12;  
     
     auto it = creators.find(opcode);
     
