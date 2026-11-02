@@ -77,7 +77,7 @@ class Instruction {
         uint16_t word;
 
     protected:
-        Instruction(uint16_t word): word(word){}
+        Instruction(uint16_t word);
         uint8_t regR() const;
         uint8_t regS() const;
         uint8_t regT() const;
