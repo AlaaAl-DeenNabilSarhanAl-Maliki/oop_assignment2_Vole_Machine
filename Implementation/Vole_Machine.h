@@ -198,7 +198,7 @@ class Cpu{
         uint16_t fetch();
     
     public:
-        Cpu(Memory& memory, const InstructionDecoder& decoder);
+        Cpu(Memory& memory, InstructionDecoder& decoder);
         StepStatus step();
         void reset();
         void halt();
