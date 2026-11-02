@@ -91,49 +91,50 @@ class Instruction {
 
 class LoadFromMemoryInstruction: public Instruction {
     public:
-        explicit LoadFromMemoryInstruction(uint16_t word): Instruction(word) {}
+        explicit LoadFromMemoryInstruction(uint16_t word);
         static std::unique_ptr<Instruction> create (uint16_t word);
         void execute(Cpu& cpu) override;
 };
 
 class LoadImmediateInstruction:public Instruction {
     public:
-        explicit LoadImmediateInstruction(uint16_t word): Instruction(word) {}
+        explicit LoadImmediateInstruction(uint16_t word);
         static std::unique_ptr<Instruction> create (uint16_t word);
         void execute(Cpu& cpu) override;
 };
 
 class StoreInstruction: public Instruction {
     public:
-        explicit StoreInstruction(uint16_t word): Instruction(word) {}
+        explicit StoreInstruction(uint16_t word);
         static std::unique_ptr<Instruction> create (uint16_t word);
         void execute(Cpu& cpu) override;
 };
 
 class MoveInstruction:public Instruction {
     public:
-        explicit MoveInstruction(uint16_t word): Instruction(word) {}
+        explicit MoveInstruction(uint16_t word);
+    
         static std::unique_ptr<Instruction> create (uint16_t word);
         void execute(Cpu& cpu) override;
 };
 
 class JumpInstruction:public Instruction {
     public:
-        explicit JumpInstruction(uint16_t word): Instruction(word) {}
+        explicit JumpInstruction(uint16_t word);
         static std::unique_ptr<Instruction> create (uint16_t word);
         void execute(Cpu& cpu) override;
 };
 
 class RotationInstruction:public Instruction {
     public:
-        explicit RotationInstruction(uint16_t word): Instruction(word) {}
+        explicit RotationInstruction(uint16_t word);
         static std::unique_ptr<Instruction> create (uint16_t word);
         void execute(Cpu& cpu) override;
 };
 
 class HaltInstruction:public Instruction {
     public:
-        explicit HaltInstruction(uint16_t word): Instruction(word) {}
+        explicit HaltInstruction(uint16_t word);
         static std::unique_ptr<Instruction> create (uint16_t word);
         void execute(Cpu& cpu) override;
 };
@@ -142,41 +143,41 @@ class BinaryRegisterInstruction:public Instruction {
     public:
         void execute(Cpu& cpu) override;
     protected:
-        explicit BinaryRegisterInstruction(uint16_t word): Instruction(word) {}
+        explicit BinaryRegisterInstruction(uint16_t word);
         virtual uint8_t compute(uint8_t a, uint8_t b) = 0;
 };
 
 class AndInstruction: public BinaryRegisterInstruction {
     public:
-        explicit AndInstruction(uint16_t word): BinaryRegisterInstruction(word) {}
+        explicit AndInstruction(uint16_t word);
         static std::unique_ptr<BinaryRegisterInstruction> create (uint16_t word);
         uint8_t compute(uint8_t a, uint8_t b) override;
 };
 
 class XorInstruction: public BinaryRegisterInstruction {
     public:
-        explicit XorInstruction(uint16_t word): BinaryRegisterInstruction(word) {}
+        explicit XorInstruction(uint16_t word);
         static std::unique_ptr<BinaryRegisterInstruction> create (uint16_t word);
         uint8_t compute(uint8_t a, uint8_t b) override;
 };
 
 class OrInstruction: public BinaryRegisterInstruction {
     public:
-        explicit OrInstruction(uint16_t word): BinaryRegisterInstruction(word) {}
+        explicit OrInstruction(uint16_t word);
         static std::unique_ptr<BinaryRegisterInstruction> create (uint16_t word);
         uint8_t compute(uint8_t a, uint8_t b) override;
 };
 
 class AddIntInstruction: public BinaryRegisterInstruction {
     public:
-        explicit AddIntInstruction(uint16_t word): BinaryRegisterInstruction(word) {}
+        AddIntInstruction(uint16_t);
         static std::unique_ptr<BinaryRegisterInstruction> create (uint16_t word);
         uint8_t compute(uint8_t a, uint8_t b) override;
 };
 
 class AddFloatInstruction: public BinaryRegisterInstruction {
     public:
-        explicit AddFloatInstruction(uint16_t word): BinaryRegisterInstruction(word) {}
+        explicit AddFloatInstruction(uint16_t word);
         static std::unique_ptr<BinaryRegisterInstruction> create (uint16_t word);
         uint8_t compute(uint8_t a, uint8_t b) override;
 };
