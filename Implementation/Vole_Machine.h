@@ -254,7 +254,7 @@ class Machine {
     
     public:
         Machine();
-        LoadResult loadProgram(std::string, int startAddress);
+        LoadResult loadProgram(const std::string& , int startAddress);
         bool setProgramCounter(uint8_t address);
         bool writeRegister(uint8_t index, uint8_t value);
         void writeMemory(uint8_t address, uint8_t value);
