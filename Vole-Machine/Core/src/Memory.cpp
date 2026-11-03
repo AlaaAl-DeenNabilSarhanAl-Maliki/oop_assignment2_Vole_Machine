@@ -10,7 +10,7 @@ Memory::Memory(Screen& screen)
 bool Memory:: isEvenAddress(int address) {
 
     return address % 2 == 0;
-};
+}
 
 
 bool Memory::fits(int start, int byteCount) {
@@ -21,7 +21,7 @@ bool Memory::fits(int start, int byteCount) {
    return start + byteCount - 1 < 255;
 
 
-};
+}
 
 void  Memory::write(uint8_t address, uint8_t value){
 
