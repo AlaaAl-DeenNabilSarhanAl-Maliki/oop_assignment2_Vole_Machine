@@ -1,4 +1,5 @@
-#include"Vole_Machine.h"
+#include "Memory.h"
+#include "Screen.h"
 
 
 
@@ -30,7 +31,7 @@ void  Memory::write(uint8_t address, uint8_t value){
         cells[address]=value;
 }
 
-uint8_t  Memory::read(uint8_t address){
+uint8_t  Memory::read(uint8_t address) const {
     if (address == 255)
         return 0;
     else {
