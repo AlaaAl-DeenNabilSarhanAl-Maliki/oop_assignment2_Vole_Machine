@@ -1,4 +1,9 @@
-#include "Vole_Machine.h" 
+#include "InstructionDecoder.h" 
+#include "DataTransferInstructions.h"
+#include "ControlInstructions.h"
+#include "AluInstruction.h" 
+#include "Cpu.h"
+#include "Common.h"
 
 InstructionDecoder::InstructionDecoder(){
     registerInstruction(0x1, LoadFromMemoryInstruction::create);

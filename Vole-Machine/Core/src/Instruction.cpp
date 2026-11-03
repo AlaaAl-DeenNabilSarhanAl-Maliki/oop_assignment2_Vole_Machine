@@ -1,4 +1,4 @@
-#include"Vole_Machine.h"
+#include "Instruction.h"
 
 Instruction::Instruction(uint16_t word): word(word){}
 

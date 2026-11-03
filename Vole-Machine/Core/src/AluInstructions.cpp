@@ -1,4 +1,8 @@
-#include "Vole_Machine.h"
+#include "AluInstruction.h"
+#include "Cpu.h"
+#include "Alu.h" 
+
+
 // Rotation 
 RotationInstruction::RotationInstruction(uint16_t word):Instruction(word){}
 

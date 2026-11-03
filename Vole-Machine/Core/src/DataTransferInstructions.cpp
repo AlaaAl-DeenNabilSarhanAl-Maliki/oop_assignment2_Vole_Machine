@@ -1,4 +1,5 @@
-# include "Vole_Machine.h"
+#include "DataTransferInstructions.h" 
+#include "Cpu.h" 
 
 // implement LoadFromMemoryInstruction methods 
 LoadFromMemoryInstruction::LoadFromMemoryInstruction(uint16_t word):Instruction(word){}
