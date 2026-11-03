@@ -1,6 +1,6 @@
 #include"Vole_Machine.h"
 
-uint8_t RegisterFile::get(uint8_t index){
+uint8_t RegisterFile::get(uint8_t index) const {
     if(index >15){
         return Registers[0];
     }else {

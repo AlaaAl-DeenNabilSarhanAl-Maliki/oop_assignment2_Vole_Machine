@@ -1,0 +1,4 @@
+{
+    "cmake.sourceDirectory": "${workspaceFolder}/Vole-Machine",
+    "cmake.generator": "MinGW Makefiles"
+}

@@ -1,4 +1,5 @@
-#include "Vole_Machine.h"
+#include "ControlInstructions.h" 
+#include "Cpu.h"
 // Jump instruction
 JumpInstruction::JumpInstruction(uint16_t word)
     : Instruction(word) {}
