@@ -1,4 +1,5 @@
-#include "Vole_Machine.h"
+#include "Machine.h"
+#include "Cpu.h"
 
 
 Machine::Machine():screen(), 
