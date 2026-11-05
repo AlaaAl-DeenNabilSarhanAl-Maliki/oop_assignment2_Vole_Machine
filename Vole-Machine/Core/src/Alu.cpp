@@ -37,14 +37,18 @@ uint8_t Alu::rotateRight(uint8_t value, uint8_t times)
 
 double Alu::floatToDouble(uint8_t bits)
 {
-    int sign = (bits >> 7) & 1;
-    int exponent = (bits >> 4) & 0x7;
-    int mantissa = bits & 0xF;
+    int sign;
+    int exponent;
+    int mantissa;
+
+    sign = (bits >> 7) & 1;
+    exponent = (bits >> 4) & 0x7; // the & 0x7 , mask->and&<-
+    mantissa = bits & 0xf;        // no shift here
 
     double value = (mantissa / 16.0) * std::pow(2.0, exponent - 4);
 
     if (sign == 1)
-        value = -value;
+        value = -value; // - or +
 
     return value;
 }
