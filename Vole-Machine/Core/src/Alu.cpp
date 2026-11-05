@@ -14,3 +14,8 @@ uint8_t Alu::bitAnd(uint8_t a, uint8_t b)
 {
     return a & b;
 }
+
+uint8_t Alu::bitXor(uint8_t a, uint8_t b)
+{
+    return a ^ b;
+}
