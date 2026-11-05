@@ -4,11 +4,13 @@
 
 
 
-Cpu::Cpu(Memory& memory, InstructionDecoder& decoder):memory(memory),
-decoder(decoder),
+Cpu::Cpu(Memory& memory, InstructionDecoder& decoder):
 programCounter(0),
 instructionRegister(0),
-halted(false){}
+halted(false),
+memory(memory),
+decoder(decoder)
+{}
 
  
 
@@ -58,15 +60,19 @@ void Cpu::writeMemory(uint8_t address, uint8_t value){
 
 }
 
-void Cpu::reset(){
-    
+void Cpu::resetState(){
     registers.clear();
     programCounter=0;
     instructionRegister=0;
     halted=false;
 }
 
-uint16_t combineBytes(uint8_t highByte, uint8_t lowByte) {
+
+void Cpu::resume(){
+    halted = false;
+}
+
+static uint16_t combineBytes(uint8_t highByte, uint8_t lowByte) {
     return (static_cast<uint16_t>(highByte) << 8) | lowByte;
 }
 
@@ -99,13 +105,15 @@ bool Cpu::isHalted() const {
         return StepStatus::INVALID_PROGRAM_COUNTER;
     }
 
-    std::unique_ptr<Instruction> decodedInstructon = decoder.decode(fetch());
+    std::unique_ptr<Instruction> decodedInstruction = decoder.decode(fetch());
 
-    if (decodedInstructon == nullptr) {
+    if (decodedInstruction == nullptr) {
+        halt();
+        programCounter -= 2;
         return StepStatus::INVALID_INSTRUCTION;
     }
 
-     decodedInstructon->execute(*this);
+     decodedInstruction->execute(*this);
 
     if (isHalted()) {
         return StepStatus::HALTED;
