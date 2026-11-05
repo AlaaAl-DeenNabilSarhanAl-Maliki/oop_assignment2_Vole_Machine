@@ -1,4 +1,7 @@
-#include"Vole_Machine.h"
+#include"Cpu.h"
+#include"Memory.h"
+#include"InstructionDecoder.h"
+
 
 
 Cpu::Cpu(Memory& memory, InstructionDecoder& decoder):memory(memory),
@@ -9,39 +12,39 @@ halted(false){}
 
  
 
-uint8_t Cpu::getProgrammCounter(){
+uint8_t Cpu::getProgramCounter () const {
     return programCounter;
   }
-void Cpu::setProgrammCounter(uint8_t address){
+void Cpu::setProgramCounter(uint8_t address){
         programCounter= address;
 
   }
 
-uint16_t Cpu::getInstructionRegister(){
+uint16_t Cpu::getInstructionRegister() const {
 
     return instructionRegister;
 
   }
 
-const RegisterFile& Cpu::getRegisters(){
+const RegisterFile& Cpu::getRegisters() const {
 
       return registers;
 
   }
-uint8_t Cpu::readRregister(uint8_t index){
+uint8_t Cpu::readRegister(uint8_t index) const{
 
      return   registers.get(index);
 
    }
 
-void Cpu::writeRregister(uint8_t index, uint8_t value){
+void Cpu::writeRegister(uint8_t index, uint8_t value){
     
     registers.set(index,value);
 
 
    }
 
-uint8_t Cpu::readMemory(uint8_t address){
+uint8_t Cpu::readMemory(uint8_t address) const{
 
     return memory.read(address);
 
@@ -83,7 +86,7 @@ void Cpu::halt() {
     halted = true;
 }
 
-bool Cpu::isHalted() {
+bool Cpu::isHalted() const {
     return halted;
 }
 
@@ -91,7 +94,7 @@ bool Cpu::isHalted() {
     if(isHalted()){
         return StepStatus::HALTED ;
     }
-    if (getProgrammCounter()>=254){
+    if (getProgramCounter()>=254){
 
         return StepStatus::INVALID_PROGRAM_COUNTER;
     }
