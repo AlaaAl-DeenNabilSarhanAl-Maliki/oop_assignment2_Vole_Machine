@@ -1,5 +1,5 @@
 #include "Alu.h"
-
+#include <cmath>
 uint8_t Alu::addInt(uint8_t a, uint8_t b)
 {
     return (a + b) % 256;
@@ -33,4 +33,18 @@ uint8_t Alu::rotateRight(uint8_t value, uint8_t times)
 {
     times = times % 8;
     return static_cast<uint8_t>((value >> times) | (value << (8 - times)));
+}
+
+double Alu::floatToDouble(uint8_t bits)
+{
+    int sign = (bits >> 7) & 1;
+    int exponent = (bits >> 4) & 0x7;
+    int mantissa = bits & 0xF;
+
+    double value = (mantissa / 16.0) * std::pow(2.0, exponent - 4);
+
+    if (sign == 1)
+        value = -value;
+
+    return value;
 }
