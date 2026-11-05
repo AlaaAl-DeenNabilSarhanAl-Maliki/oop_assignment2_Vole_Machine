@@ -11,9 +11,18 @@ Machine::Machine():screen(),
 //   use programLoader 
 LoadResult Machine::loadProgram(  
     const std::string& path,
-     int startAddress){
+    int startAddress){
 
-    return loader.load(path, startAddress, memory);
+        LoadResult load_result = loader.load(path, startAddress, memory);
+        
+        if (load_result.success) {
+            cpu.resetState();
+            setProgramCounter(startAddress);
+            screen.clear();
+        }
+    
+    
+        return load_result;
 } 
 // set PC  by the user
 bool Machine::setProgramCounter(uint8_t address) {
@@ -21,6 +30,7 @@ bool Machine::setProgramCounter(uint8_t address) {
         return false;
     } 
     cpu.setProgramCounter(address);
+    cpu.resume();
     return true;
 
 }
@@ -54,7 +64,10 @@ StepStatus Machine::runAll( int maxSteps) {
 }
 
 void Machine::reset() {
-    cpu.reset();
+    cpu.resetState();
+    screen.clear();
+    memory.clear();
+
 }
 
  // console view need these three objects 
