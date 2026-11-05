@@ -7,8 +7,11 @@ uint8_t Alu::addInt(uint8_t a, uint8_t b)
 
 uint8_t Alu::addFloat(uint8_t a, uint8_t b)
 {
-    double sum = floatToDouble(a) + floatToDouble(b);
-    return doubleToFloat(sum);
+    double the_sumA_B;
+    double the_a = floatToDouble(a);
+    double the_b = floatToDouble(b);
+    the_sumA_B = the_a + the_b;
+    return doubleToFloat(the_sumA_B);
 }
 
 uint8_t Alu::bitOR(uint8_t a, uint8_t b)
