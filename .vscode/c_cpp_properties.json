@@ -3,11 +3,11 @@
     {
       "name": "Win32",
       "includePath": [
-        "${workspaceFolder}/**",
-        "${workspaceFolder}/Core/Include",
-        "${workspaceFolder}/CLI/Include",
-        "${workspaceFolder}/GUI/Include"
-      ],
+    "${workspaceFolder}/**",
+    "${workspaceFolder}/Vole-Machine/Core/include",
+    "${workspaceFolder}/Vole-Machine/CLI/include",
+    "${workspaceFolder}/Vole-Machine/GUI/include"
+],
       "defines": [
         "_DEBUG",
         "UNICODE",

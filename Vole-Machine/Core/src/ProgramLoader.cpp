@@ -1,9 +1,13 @@
-#include"Vole_Machine.h"
+#include "ProgramLoader.h"
+#include "Common.h"
+#include "InstructionDecoder.h"
 #include <fstream>
 #include <sstream>
-#include <cctype>
-#include "ProgramLoader.h"
 #include <iomanip>
+#include <cctype>
+#include <string>
+#include <vector>
+
 
 std::string ProgramLoader::toHexText(int value, int digitCount)
 {
