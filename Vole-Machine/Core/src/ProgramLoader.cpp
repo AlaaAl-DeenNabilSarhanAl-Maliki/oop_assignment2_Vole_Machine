@@ -1,8 +1,9 @@
-#include"Vole_Machine.h"
+
 #include <fstream>
 #include <sstream>
 #include "ProgramLoader.h"
-
+#include "Memory.h"
+#include "InstructionDecoder.h" 
 
 ProgramLoader::ProgramLoader(const InstructionDecoder &decoder): decoder(decoder) 
 {}
