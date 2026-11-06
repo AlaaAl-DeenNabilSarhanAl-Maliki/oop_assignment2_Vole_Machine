@@ -1,5 +1,6 @@
 #include "ProgramLoader.h"
 #include "Common.h"
+#include "Memory.h"
 #include "InstructionDecoder.h"
 #include <fstream>
 #include <sstream>
