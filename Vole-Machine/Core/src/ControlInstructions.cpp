@@ -7,7 +7,7 @@ JumpInstruction::JumpInstruction(uint16_t word)
 std::unique_ptr<Instruction> JumpInstruction::create(uint16_t word)  {
     uint8_t address = word & 0xFF;  
  
-    if ((word & 0x0F00) != 0 || address % 2 != 0)
+    if ( address % 2 != 0)
         return nullptr; 
 
     return std::make_unique<JumpInstruction>(word);

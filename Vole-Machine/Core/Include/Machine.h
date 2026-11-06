@@ -19,6 +19,8 @@ class Machine {
         ProgramLoader loader;
     
     public:
+        Machine(const Machine&) = delete;
+        Machine& operator=(const Machine&) = delete;
         Machine();
         LoadResult loadProgram(const std::string& , int startAddress);
         bool setProgramCounter(uint8_t address);

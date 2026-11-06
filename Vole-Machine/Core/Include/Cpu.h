@@ -22,7 +22,9 @@ class Cpu{
     public:
         Cpu(Memory& memory, InstructionDecoder& decoder);
         StepStatus step();
-        void reset();
+       
+        void resume();
+        void resetState();
         void halt();
         bool isHalted() const;
         uint8_t readRegister(uint8_t index) const;
