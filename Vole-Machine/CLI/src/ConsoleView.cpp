@@ -1,7 +1,7 @@
-#include"Vole_Machine.h"
+#include "ConsoleView.h"
+#include "Machine.h"
 #include <iostream>
 #include <string>
-#include <algorithm>
 #include <iomanip>
 #include <sstream>
 
@@ -64,6 +64,9 @@ void ConsoleView::showScreen(const Screen& screen)
             std::cout << ".";
         }
     }
+
+
+    std::cout << "\n---------------------\n";
 }
 
 void ConsoleView::showRegisters(const Cpu& cpu)
