@@ -1,0 +1,17 @@
+; Integer add (two's complement): wrap-around and negative numbers.
+; Expected: Screen: 00 00 02 FA. (80+80=00, FF+01=00, 05+FD=02, FD+FD=FA)
+2180 ; R1=80
+2280 ; R2=80
+5312 ; R3=R1+R2 = 00 (wrap)
+33FF ; screen 00
+24FF ; R4=FF (-1)
+2501 ; R5=01
+5645 ; R6=R4+R5 = 00
+36FF ; screen 00
+2705 ; R7=05
+28FD ; R8=FD (-3)
+5978 ; R9=R7+R8 = 02
+39FF ; screen 02
+5A88 ; RA=R8+R8 = FA (-6)
+3AFF ; screen FA
+C000 ; halt
