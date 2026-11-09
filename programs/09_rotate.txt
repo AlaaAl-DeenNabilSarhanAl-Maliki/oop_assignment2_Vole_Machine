@@ -1,0 +1,15 @@
+; Rotate right by 1, 4, 0 and 8.
+; Expected: Screen: C0 18 81 81.
+2081 ; R0=81
+A001 ; rotate R0 right by 1 -> C0
+30FF ; screen C0
+2181 ; R1=81
+A104 ; rotate right by 4 -> 18
+31FF ; screen 18
+2281 ; R2=81
+A200 ; rotate by 0 -> 81
+32FF ; screen 81
+2381 ; R3=81
+A308 ; rotate by 8 -> 81
+33FF ; screen 81
+C000 ; halt

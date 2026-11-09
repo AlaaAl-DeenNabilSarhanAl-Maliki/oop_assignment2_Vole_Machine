@@ -1,8 +1,8 @@
+// MainWindow.cpp
 #include "MainWindow.h"
 
 #include "ControlBar.h"
 #include "InstructionSetDialog.h"
-#include "Memory.h"
 #include "MemoryPanel.h"
 #include "ProgramListPanel.h"
 #include "RegisterPanel.h"
@@ -10,170 +10,155 @@
 
 #include <QAction>
 #include <QActionGroup>
+#include <QApplication>
 #include <QCloseEvent>
 #include <QDragEnterEvent>
 #include <QDropEvent>
 #include <QFileDialog>
 #include <QFileInfo>
-#include <QGroupBox>
+#include <QKeySequence>
 #include <QLabel>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QMimeData>
 #include <QSettings>
+#include <QSignalBlocker>
 #include <QSplitter>
 #include <QStatusBar>
 #include <QUrl>
 #include <QVBoxLayout>
 
 namespace {
-
-const int kMaxRecentFiles = 5;
-
-QGroupBox* wrapInGroup(const QString& title, QWidget* inner)
-{
-    auto* box = new QGroupBox(title);
-    auto* layout = new QVBoxLayout(box);
-    layout->addWidget(inner);
-    return box;
-}
-
-// The address highlighted in the memory table and in the program list.
-// After HALT the PC points past the HALT instruction, so we highlight HALT itself.
-uint8_t addressToHighlight(const Machine& machine)
-{
-    const Cpu& cpu = machine.getCpu();
-    const uint8_t pc = cpu.getProgramCounter();
-
-    if (cpu.isHalted() && pc >= 2) {
-        const uint8_t opcode = machine.getMemory().read(static_cast<uint8_t>(pc - 2)) >> 4;
-        if (opcode == 0xC) return static_cast<uint8_t>(pc - 2);
-    }
-    return pc;
-}
-
+constexpr int kMaxRecentFiles = 8;
+const char* kOrganization = "Vole";
+const char* kApplication  = "VoleGui";
 } // namespace
 
-/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/
+// ============================================================================
+// construction
+// ============================================================================
 
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent)
 {
     setWindowTitle("Vole Machine Simulator");
     setAcceptDrops(true);
-    resize(1180, 760);
 
     buildUi();
     buildMenus();
-    connectSignals();
     loadSettings();
+    connectSignals();
+
+    runTimer.setSingleShot(false);
+    runTimer.setInterval(controlBar->stepDelayMs());
 
     before = MachineSnapshot::take(machine);
-    runTimer.setInterval(controlBar->stepDelayMs());
     refresh();
 }
-
-/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/
 
 void MainWindow::buildUi()
 {
     auto* central = new QWidget(this);
     auto* layout = new QVBoxLayout(central);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
 
     controlBar = new ControlBar(central);
     layout->addWidget(controlBar);
 
-    memoryPanel   = new MemoryPanel();
-    registerPanel = new RegisterPanel();
-    screenPanel   = new ScreenPanel();
-    programList   = new ProgramListPanel();
+    programList   = new ProgramListPanel;
+    memoryPanel   = new MemoryPanel;
+    registerPanel = new RegisterPanel;
+    screenPanel   = new ScreenPanel;
 
-    auto* topSplit = new QSplitter(Qt::Horizontal);
-    topSplit->addWidget(wrapInGroup("Memory (address = row + column)", memoryPanel));
-    topSplit->addWidget(wrapInGroup("Registers", registerPanel));
-    topSplit->setStretchFactor(0, 3);
-    topSplit->setStretchFactor(1, 1);
+    auto* rightSplitter = new QSplitter(Qt::Vertical);
+    rightSplitter->addWidget(registerPanel);
+    rightSplitter->addWidget(screenPanel);
+    rightSplitter->setStretchFactor(1, 1);
 
-    auto* bottomSplit = new QSplitter(Qt::Horizontal);
-    bottomSplit->addWidget(wrapInGroup("Program", programList));
-    bottomSplit->addWidget(wrapInGroup("Screen", screenPanel));
-    bottomSplit->setStretchFactor(0, 1);
-    bottomSplit->setStretchFactor(1, 1);
-
-    auto* vertical = new QSplitter(Qt::Vertical);
-    vertical->addWidget(topSplit);
-    vertical->addWidget(bottomSplit);
-    vertical->setStretchFactor(0, 3);
-    vertical->setStretchFactor(1, 2);
-    layout->addWidget(vertical, 1);
+    auto* mainSplitter = new QSplitter(Qt::Horizontal, central);
+    mainSplitter->addWidget(programList);
+    mainSplitter->addWidget(memoryPanel);
+    mainSplitter->addWidget(rightSplitter);
+    mainSplitter->setSizes({380, 540, 320});
+    mainSplitter->setStretchFactor(1, 1);
+    layout->addWidget(mainSplitter, 1);
 
     setCentralWidget(central);
 
-    stateLabel = new QLabel("No program loaded");
-    pcLabel    = new QLabel("PC: 00");
-    stepsLabel = new QLabel("Steps: 0");
+    stateLabel = new QLabel(this);
+    pcLabel    = new QLabel(this);
+    stepsLabel = new QLabel(this);
     statusBar()->addPermanentWidget(stateLabel);
     statusBar()->addPermanentWidget(pcLabel);
     statusBar()->addPermanentWidget(stepsLabel);
+
+    resize(1250, 780);
 }
 
 void MainWindow::buildMenus()
 {
-    // ---------------- File ----------------
+    // ---- File ----
     QMenu* fileMenu = menuBar()->addMenu("&File");
 
-    QAction* openAction = fileMenu->addAction("&Open program...");
+    QAction* openAction = fileMenu->addAction("&Open...");
     openAction->setShortcut(QKeySequence::Open);
     connect(openAction, &QAction::triggered, this, &MainWindow::onOpen);
 
-    recentMenu = fileMenu->addMenu("Open &recent");
+    recentMenu = fileMenu->addMenu("Open &Recent");
 
     restartAction = fileMenu->addAction("Re&start program");
     restartAction->setShortcut(QKeySequence("Ctrl+Shift+R"));
     connect(restartAction, &QAction::triggered, this, &MainWindow::onRestart);
 
     fileMenu->addSeparator();
-    QAction* exitAction = fileMenu->addAction("E&xit");
-    exitAction->setShortcut(QKeySequence::Quit);
-    connect(exitAction, &QAction::triggered, this, &QWidget::close);
+    QAction* quitAction = fileMenu->addAction("&Quit");
+    quitAction->setShortcut(QKeySequence::Quit);
+    connect(quitAction, &QAction::triggered, this, &QWidget::close);
 
-    // ---------------- Run ----------------
+    // ---- Run ----
     QMenu* runMenu = menuBar()->addMenu("&Run");
 
     stepAction = runMenu->addAction("&Step");
     stepAction->setShortcut(QKeySequence(Qt::Key_F10));
     connect(stepAction, &QAction::triggered, this, &MainWindow::onStep);
 
-    runAllAction = runMenu->addAction("Run &all at once");
+    runAllAction = runMenu->addAction("Run &All");
     runAllAction->setShortcut(QKeySequence(Qt::Key_F5));
     connect(runAllAction, &QAction::triggered, this, &MainWindow::onRunAll);
 
-    runAction = runMenu->addAction("Run / &Pause (animated)");
+    runAction = runMenu->addAction("&Run / Pause");
     runAction->setShortcut(QKeySequence(Qt::Key_F6));
     connect(runAction, &QAction::triggered, this, [this]() {
         onRunToggled(uiState != UiState::Running);
     });
 
     runMenu->addSeparator();
-    resetAction = runMenu->addAction("&Reset machine");
+    resetAction = runMenu->addAction("Re&set machine");
     resetAction->setShortcut(QKeySequence("Ctrl+R"));
     connect(resetAction, &QAction::triggered, this, &MainWindow::onReset);
 
-    // ---------------- View ----------------
+    // ---- View ----
     QMenu* viewMenu = menuBar()->addMenu("&View");
-    QMenu* baseMenu = viewMenu->addMenu("Number &base");
+    QMenu* baseMenu = viewMenu->addMenu("&Number base");
+
     auto* baseGroup = new QActionGroup(this);
     baseGroup->setExclusive(true);
 
-    const char* baseNames[] = {"Hexadecimal", "Decimal", "Binary"};
-    for (int i = 0; i < 3; ++i) {
-        QAction* action = baseMenu->addAction(baseNames[i]);
-        action->setCheckable(true);
-        action->setData(i);
-        action->setObjectName(QString("baseAction%1").arg(i));
-        baseGroup->addAction(action);
-        if (i == 0) action->setChecked(true);
+    struct BaseEntry { const char* text; const char* name; DisplayBase base; };
+    const BaseEntry entries[] = {
+        {"&Hexadecimal", "baseHex",     DisplayBase::Hex},
+        {"&Decimal",     "baseDecimal", DisplayBase::Decimal},
+        {"&Binary",      "baseBinary",  DisplayBase::Binary},
+    };
+    for (const BaseEntry& e : entries) {
+        QAction* a = baseMenu->addAction(e.text);
+        a->setObjectName(e.name);
+        a->setCheckable(true);
+        a->setData(static_cast<int>(e.base));
+        a->setChecked(e.base == displayBase);
+        baseGroup->addAction(a);
     }
     connect(baseGroup, &QActionGroup::triggered, this, &MainWindow::onDisplayBaseSelected);
 
@@ -181,10 +166,9 @@ void MainWindow::buildMenus()
     darkModeAction->setCheckable(true);
     connect(darkModeAction, &QAction::toggled, this, &MainWindow::onThemeToggled);
 
-    // ---------------- Help ----------------
+    // ---- Help ----
     QMenu* helpMenu = menuBar()->addMenu("&Help");
-    QAction* setAction = helpMenu->addAction("&Instruction set");
-    setAction->setShortcut(QKeySequence(Qt::Key_F1));
+    QAction* setAction = helpMenu->addAction("&Instruction set...");
     connect(setAction, &QAction::triggered, this, &MainWindow::onShowInstructionSet);
     QAction* aboutAction = helpMenu->addAction("&About");
     connect(aboutAction, &QAction::triggered, this, &MainWindow::onAbout);
@@ -192,6 +176,7 @@ void MainWindow::buildMenus()
 
 void MainWindow::connectSignals()
 {
+    // control bar
     connect(controlBar, &ControlBar::loadClicked,    this, &MainWindow::onOpen);
     connect(controlBar, &ControlBar::stepClicked,    this, &MainWindow::onStep);
     connect(controlBar, &ControlBar::runAllClicked,  this, &MainWindow::onRunAll);
@@ -200,263 +185,213 @@ void MainWindow::connectSignals()
     connect(controlBar, &ControlBar::resetClicked,   this, &MainWindow::onReset);
     connect(controlBar, &ControlBar::speedChanged,   this, &MainWindow::onSpeedChanged);
 
+    connect(&runTimer, &QTimer::timeout, this, &MainWindow::onTimerTick);
+
+    // memory panel
     connect(memoryPanel, &MemoryPanel::memoryEdited, this, &MainWindow::onMemoryEdited);
     connect(memoryPanel, &MemoryPanel::editRejected, this, &MainWindow::onEditRejected);
     connect(memoryPanel, &MemoryPanel::setProgramCounterRequested,
             this, &MainWindow::onSetProgramCounterRequested);
 
-    connect(registerPanel, &RegisterPanel::registerEdited, this, &MainWindow::onRegisterEdited);
-    connect(registerPanel, &RegisterPanel::programCounterEdited,
-            this, &MainWindow::onProgramCounterEdited);
-    connect(registerPanel, &RegisterPanel::editRejected, this, &MainWindow::onEditRejected);
+    // register panel
+    connect(registerPanel, &RegisterPanel::registerEdited,       this, &MainWindow::onRegisterEdited);
+    connect(registerPanel, &RegisterPanel::programCounterEdited, this, &MainWindow::onProgramCounterEdited);
+    connect(registerPanel, &RegisterPanel::editRejected,         this, &MainWindow::onEditRejected);
 
-    connect(programList, &ProgramListPanel::breakpointToggled,
-            this, &MainWindow::onBreakpointToggled);
+    // program list
+    connect(programList, &ProgramListPanel::breakpointToggled, this, &MainWindow::onBreakpointToggled);
     connect(programList, &ProgramListPanel::setProgramCounterRequested,
             this, &MainWindow::onSetProgramCounterRequested);
-
-    connect(&runTimer, &QTimer::timeout, this, &MainWindow::onTimerTick);
 }
 
-/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/
+// ============================================================================
+// settings
+// ============================================================================
 
 void MainWindow::loadSettings()
 {
-    QSettings settings("FCAI-CU", "VoleSimulator");
+    QSettings settings(kOrganization, kApplication);
 
-    restoreGeometry(settings.value("geometry").toByteArray());
     recentFiles = settings.value("recentFiles").toStringList();
-    rebuildRecentMenu();
 
-    const int baseIndex = settings.value("displayBase", 0).toInt();
-    displayBase = static_cast<DisplayBase>(baseIndex >= 0 && baseIndex <= 2 ? baseIndex : 0);
-    if (QAction* baseAction = findChild<QAction*>(QString("baseAction%1").arg(static_cast<int>(displayBase))))
-        baseAction->setChecked(true);
-    memoryPanel->setDisplayBase(displayBase);
-    registerPanel->setDisplayBase(displayBase);
-
-    const bool dark = settings.value("darkMode", false).toBool();
+    const bool dark = settings.value("darkTheme", false).toBool();
     ThemeManager::apply(dark ? Theme::Dark : Theme::Light);
-    {
+    if (darkModeAction) {
         QSignalBlocker blocker(darkModeAction);
         darkModeAction->setChecked(dark);
     }
 
-    const int start = settings.value("startAddress", 0).toInt();
-    controlBar->setStartAddress(start);
+    const int baseValue = settings.value("displayBase", static_cast<int>(DisplayBase::Hex)).toInt();
+    switch (baseValue) {
+    case static_cast<int>(DisplayBase::Decimal): displayBase = DisplayBase::Decimal; break;
+    case static_cast<int>(DisplayBase::Binary):  displayBase = DisplayBase::Binary;  break;
+    default:                                     displayBase = DisplayBase::Hex;     break;
+    }
+    const char* actionName = displayBase == DisplayBase::Decimal ? "baseDecimal"
+                           : displayBase == DisplayBase::Binary  ? "baseBinary"
+                                                                 : "baseHex";
+    if (QAction* a = findChild<QAction*>(actionName))
+        a->setChecked(true);
+    memoryPanel->setDisplayBase(displayBase);
+    registerPanel->setDisplayBase(displayBase);
+
+    const QByteArray geometry = settings.value("geometry").toByteArray();
+    if (!geometry.isEmpty())
+        restoreGeometry(geometry);
+
+    rebuildRecentMenu();
 }
 
 void MainWindow::saveSettings()
 {
-    QSettings settings("FCAI-CU", "VoleSimulator");
-    settings.setValue("geometry", saveGeometry());
+    QSettings settings(kOrganization, kApplication);
     settings.setValue("recentFiles", recentFiles);
+    settings.setValue("darkTheme", ThemeManager::current() == Theme::Dark);
     settings.setValue("displayBase", static_cast<int>(displayBase));
-    settings.setValue("darkMode", ThemeManager::current() == Theme::Dark);
-    settings.setValue("startAddress", controlBar->startAddress().value_or(0));
+    settings.setValue("geometry", saveGeometry());
 }
 
-void MainWindow::closeEvent(QCloseEvent* event)
+void MainWindow::addRecentFile(const QString& path)
 {
-    runTimer.stop();
-    saveSettings();
-    event->accept();
+    const QString absolute = QFileInfo(path).absoluteFilePath();
+    recentFiles.removeAll(absolute);
+    recentFiles.prepend(absolute);
+    while (recentFiles.size() > kMaxRecentFiles)
+        recentFiles.removeLast();
+    rebuildRecentMenu();
 }
 
-/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/
-
-void MainWindow::dragEnterEvent(QDragEnterEvent* event)
+void MainWindow::rebuildRecentMenu()
 {
-    if (event->mimeData()->hasUrls()) event->acceptProposedAction();
+    if (!recentMenu)
+        return;
+    recentMenu->clear();
+
+    if (recentFiles.isEmpty()) {
+        QAction* none = recentMenu->addAction("(empty)");
+        none->setEnabled(false);
+        return;
+    }
+
+    for (const QString& path : recentFiles) {
+        QAction* a = recentMenu->addAction(QFileInfo(path).fileName());
+        a->setData(path);
+        a->setToolTip(path);
+        a->setStatusTip(path);
+        connect(a, &QAction::triggered, this, &MainWindow::onOpenRecent);
+    }
+    recentMenu->addSeparator();
+    QAction* clear = recentMenu->addAction("Clear list");
+    connect(clear, &QAction::triggered, this, [this]() {
+        recentFiles.clear();
+        rebuildRecentMenu();
+    });
 }
 
-void MainWindow::dropEvent(QDropEvent* event)
-{
-    const QList<QUrl> urls = event->mimeData()->urls();
-    if (urls.isEmpty() || !urls.first().isLocalFile()) return;
-    openProgram(urls.first().toLocalFile());
-}
-
-/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/
-
-void MainWindow::onOpen()
-{
-    const QString folder = currentFilePath.isEmpty()
-                               ? QString()
-                               : QFileInfo(currentFilePath).absolutePath();
-
-    const QString path = QFileDialog::getOpenFileName(
-        this, "Open Vole program", folder,
-        "Vole programs (*.txt *.vole);;All files (*)");
-
-    if (!path.isEmpty()) openProgram(path);
-}
-
-void MainWindow::onOpenRecent()
-{
-    const QAction* action = qobject_cast<QAction*>(sender());
-    if (action != nullptr) openProgram(action->data().toString());
-}
+// ============================================================================
+// loading
+// ============================================================================
 
 bool MainWindow::openProgram(const QString& path)
 {
-    const std::optional<int> start = controlBar->startAddress();
+    int start = 0;
+    if (const std::optional<int> typed = controlBar->startAddress())
+        start = *typed;
 
-    if (!start.has_value()) {
-        StatusMessage message = StatusText::invalidInput(
-            "Start address must be a hex value between 00 and FF.");
-        message.showDialog = true;
-        showMessage(message);
-        return false;
-    }
-    if (!Memory::isEvenAddress(*start) || *start >= Memory::screenAddress) {
-        StatusMessage message = StatusText::invalidInput(
-            "Start address must be an even number lower than FF.");
-        message.showDialog = true;
-        showMessage(message);
+    if (!Memory::isEvenAddress(start) || start >= Memory::screenAddress) {
+        showMessage(StatusText::invalidInput(
+            "The start address must be even and below FF (for example 00 or 10)."));
         return false;
     }
 
-    return loadFile(path, *start);
+    if (QFileInfo(path).absoluteFilePath() != QFileInfo(currentFilePath).absoluteFilePath())
+        breakpoints.clear();
+
+    if (!loadFile(path, start))
+        return false;
+
+    controlBar->setStartAddress(start);
+    addRecentFile(path);
+    return true;
 }
 
 bool MainWindow::loadFile(const QString& path, int startAddress)
 {
     stopRunning();
+    machine.reset();
+    skipBreakpointOnce = false;
+    stepCount = 0;
 
-    // toLocal8Bit: the model opens the file with std::ifstream (narrow path).
-    const LoadResult result = machine.loadProgram(path.toLocal8Bit().toStdString(), startAddress);
-    showMessage(StatusText::fromLoad(result));
+    const LoadResult result = machine.loadProgram(path.toStdString(), startAddress);
+    const StatusMessage message = StatusText::fromLoad(result);
 
     if (!result.success) {
-        updateUiState();   // a failed load changes nothing in the machine
+        // A failed load can leave partial data behind: start from a clean machine.
+        machine.reset();
+        programLoaded = false;
+        loadedWords = 0;
+        uiState = UiState::NoProgram;
+        before = MachineSnapshot::take(machine);
+        refresh();
+        showMessage(message);
         return false;
     }
 
-    if (path != currentFilePath) {
-        breakpoints.clear();
-        programList->setBreakpoints(breakpoints);
-    }
+    // Make sure execution starts at the load address.
+    machine.setProgramCounter(static_cast<uint8_t>(startAddress));
 
+    programLoaded = true;
     currentFilePath = path;
     loadedStart = startAddress;
     loadedWords = result.wordsLoaded;
-    programLoaded = true;
-    stepCount = 0;
-    skipBreakpointOnce = false;
+    uiState = UiState::Ready;
 
-    before = MachineSnapshot::take(machine);
-    addRecentFile(path);
-    setWindowTitle(QFileInfo(path).fileName() + " - Vole Machine Simulator");
+    before = MachineSnapshot::take(machine);   // nothing is highlighted right after a load
     refresh();
+    showMessage(message);
     return true;
 }
 
-/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/
-
-void MainWindow::onStep()
+void MainWindow::onOpen()
 {
-    if (uiState != UiState::Ready) return;
-    executeOneStep();
+    QString startDir;
+    if (!currentFilePath.isEmpty())
+        startDir = QFileInfo(currentFilePath).absolutePath();
+    else if (!recentFiles.isEmpty())
+        startDir = QFileInfo(recentFiles.first()).absolutePath();
+
+    const QString path = QFileDialog::getOpenFileName(
+        this, "Open Vole program", startDir,
+        "Vole programs (*.txt *.vole *.hex);;All files (*)");
+    if (path.isEmpty())
+        return;
+    openProgram(path);
 }
 
-void MainWindow::executeOneStep()
+void MainWindow::onOpenRecent()
 {
-    before = MachineSnapshot::take(machine);
-    const StepStatus status = machine.step();
+    auto* action = qobject_cast<QAction*>(sender());
+    if (!action)
+        return;
 
-    // A step counts when an instruction really ran (HALT counts too).
-    if (status == StepStatus::OK || (status == StepStatus::HALTED && !before.halted)) {
-        if (stepCount < 0) stepCount = 0;
-        ++stepCount;
-    }
+    const QString path = action->data().toString();
+    if (path.isEmpty())
+        return;
 
-    // Stop the timer BEFORE any dialog opens (a dialog keeps the event loop alive).
-    if (status != StepStatus::OK) runTimer.stop();
-
-    refresh();
-
-    if (status != StepStatus::OK) {
-        StatusMessage message = StatusText::fromStep(status, machine.getCpu().getProgramCounter());
-        if (status == StepStatus::INVALID_INSTRUCTION) {
-            message.text += ". Fix the memory, then right-click a cell > \"Set PC here\" to continue.";
-        }
-        showMessage(message);
-    }
-}
-
-void MainWindow::onRunAll()
-{
-    if (uiState != UiState::Ready) return;
-
-    before = MachineSnapshot::take(machine);
-    const StepStatus status = machine.runAll();
-    stepCount = -1;   // runAll does not report how many steps it executed
-
-    refresh();
-    showMessage(StatusText::fromStep(status, machine.getCpu().getProgramCounter()));
-}
-
-void MainWindow::onRunToggled(bool running)
-{
-    if (!running) {
-        stopRunning();
+    if (!QFileInfo::exists(path)) {
+        recentFiles.removeAll(path);
+        rebuildRecentMenu();
+        showMessage(StatusText::invalidInput(QString("File not found: %1").arg(path)));
         return;
     }
-
-    if (uiState != UiState::Ready) {
-        updateUiState();   // put the Run button back in sync
-        return;
-    }
-
-    if (stepCount < 0) stepCount = 0;
-    runStartStep = stepCount;
-
-    // If we start on a breakpoint, step off it first instead of stopping at once.
-    skipBreakpointOnce = hitBreakpoint();
-
-    runTimer.setInterval(controlBar->stepDelayMs());
-    runTimer.start();
-    updateUiState();
-}
-
-void MainWindow::onTimerTick()
-{
-    if (hitBreakpoint() && !skipBreakpointOnce) {
-        stopRunning();
-        statusBar()->showMessage(
-            "Stopped at breakpoint " + GuiUtil::hexByte(machine.getCpu().getProgramCounter()), 5000);
-        return;
-    }
-    skipBreakpointOnce = false;
-
-    if (stepCount - runStartStep >= maxAnimatedSteps) {
-        stopRunning();
-        showMessage(StatusText::fromStep(StepStatus::STEP_LIMIT_REACHED,
-                                         machine.getCpu().getProgramCounter()));
-        return;
-    }
-
-    executeOneStep();
-}
-
-void MainWindow::stopRunning()
-{
-    runTimer.stop();
-    skipBreakpointOnce = false;
-    updateUiState();
-}
-
-bool MainWindow::hitBreakpoint() const
-{
-    return breakpoints.count(machine.getCpu().getProgramCounter()) > 0;
+    openProgram(path);
 }
 
 void MainWindow::onRestart()
 {
-    if (currentFilePath.isEmpty()) return;
-    stopRunning();
-    loadFile(currentFilePath, loadedStart);
+    if (currentFilePath.isEmpty())
+        return;
+    loadFile(currentFilePath, loadedStart);    // breakpoints are kept
 }
 
 void MainWindow::onReset()
@@ -466,26 +401,153 @@ void MainWindow::onReset()
 
     programLoaded = false;
     loadedWords = 0;
-    stepCount = 0;
+    loadedStart = 0;
     currentFilePath.clear();
+    stepCount = 0;
     breakpoints.clear();
-    programList->setBreakpoints(breakpoints);
+    skipBreakpointOnce = false;
+    uiState = UiState::NoProgram;
 
     before = MachineSnapshot::take(machine);
-    setWindowTitle("Vole Machine Simulator");
     refresh();
-    statusBar()->showMessage("Machine reset", 4000);
+    showMessage(StatusText::invalidInput("Machine reset."));
+}
+
+// ============================================================================
+// execution
+// ============================================================================
+
+void MainWindow::executeOneStep()
+{
+    before = MachineSnapshot::take(machine);
+    const uint8_t pcBefore = machine.getCpu().getProgramCounter();
+
+    const StepStatus status = machine.step();
+
+    if (stepCount >= 0 && (status == StepStatus::OK ||
+                           (status == StepStatus::HALTED && !before.halted)))
+        ++stepCount;
+
+    if (status != StepStatus::OK) {
+        stopRunning();
+        uiState = UiState::Halted;           // sticky until reload / reset / PC change
+        refresh();
+        showMessage(StatusText::fromStep(status, pcBefore));
+        return;
+    }
+    refresh();
+}
+
+void MainWindow::onStep()
+{
+    if (!programLoaded)
+        return;
+    executeOneStep();
+}
+
+void MainWindow::onRunAll()
+{
+    if (!programLoaded)
+        return;
+
+    stopRunning();
+    before = MachineSnapshot::take(machine);
+    const uint8_t pcBefore = machine.getCpu().getProgramCounter();
+
+    const StepStatus status = machine.runAll();
+
+    stepCount = -1;                           // runAll does not report how many steps it took
+
+    if (status == StepStatus::HALTED ||
+        status == StepStatus::INVALID_INSTRUCTION ||
+        status == StepStatus::INVALID_PROGRAM_COUNTER)
+        uiState = UiState::Halted;
+
+    refresh();
+    showMessage(StatusText::fromStep(status, pcBefore));
+}
+
+void MainWindow::onRunToggled(bool running)
+{
+    if (!running) {
+        stopRunning();
+        return;
+    }
+
+    if (!programLoaded || machine.getCpu().isHalted() || uiState == UiState::Halted) {
+        updateUiState();
+        return;
+    }
+
+    skipBreakpointOnce = hitBreakpoint();     // lets Run continue from a breakpoint
+    runTimer.setInterval(controlBar->stepDelayMs());
+    runTimer.start();
+    updateUiState();
+    updateStatusBar();
+}
+
+void MainWindow::onTimerTick()
+{
+    if (stepCount >= 0 && stepCount >= maxAnimatedSteps) {
+        stopRunning();
+        showMessage(StatusText::fromStep(StepStatus::STEP_LIMIT_REACHED,
+                                         machine.getCpu().getProgramCounter()));
+        refresh();
+        return;
+    }
+
+    if (hitBreakpoint()) {
+        if (skipBreakpointOnce) {
+            skipBreakpointOnce = false;
+        } else {
+            stopRunning();
+            StatusMessage m = StatusText::invalidInput(
+                QString("Breakpoint at %1.").arg(GuiUtil::hexByte(machine.getCpu().getProgramCounter())));
+            m.severity = MessageSeverity::Info;
+            refresh();
+            showMessage(m);
+            return;
+        }
+    } else {
+        skipBreakpointOnce = false;
+    }
+
+    executeOneStep();
 }
 
 void MainWindow::onSpeedChanged(int delayMs)
 {
-    runTimer.setInterval(delayMs);
+    if (runTimer.isActive())
+        runTimer.setInterval(delayMs);
 }
 
-/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/
+void MainWindow::stopRunning()
+{
+    runTimer.stop();
+    updateUiState();
+}
+
+bool MainWindow::hitBreakpoint() const
+{
+    return breakpoints.count(machine.getCpu().getProgramCounter()) != 0;
+}
+
+// ============================================================================
+// edits coming from the panels
+// ============================================================================
 
 void MainWindow::onMemoryEdited(uint8_t address, uint8_t value)
 {
+    if (uiState == UiState::Running) {
+        refresh();
+        return;
+    }
+    if (address == Memory::screenAddress) {
+        onEditRejected("Cell FF is the screen and cannot be edited.");
+        refresh();
+        return;
+    }
+
     before = MachineSnapshot::take(machine);   // so the edited cell is highlighted
     machine.writeMemory(address, value);
     refresh();
@@ -493,9 +555,15 @@ void MainWindow::onMemoryEdited(uint8_t address, uint8_t value)
 
 void MainWindow::onRegisterEdited(uint8_t index, uint8_t value)
 {
+    if (uiState == UiState::Running) {
+        refresh();
+        return;
+    }
+
     before = MachineSnapshot::take(machine);
     if (!machine.writeRegister(index, value)) {
-        showMessage(StatusText::invalidInput("Invalid register number."));
+        onEditRejected(QString("Could not write register R%1.")
+                           .arg(QString::number(index, 16).toUpper()));
     }
     refresh();
 }
@@ -507,10 +575,21 @@ void MainWindow::onProgramCounterEdited(uint8_t address)
 
 void MainWindow::onSetProgramCounterRequested(uint8_t address)
 {
+    if (uiState == UiState::Running) {
+        refresh();
+        return;
+    }
+
     before = MachineSnapshot::take(machine);
     if (!machine.setProgramCounter(address)) {
-        showMessage(StatusText::invalidInput("The program counter must be an even address."));
+        onEditRejected(QString("Cannot set PC to %1: it must be an even address below FF.")
+                           .arg(GuiUtil::hexByte(address)));
+        refresh();
+        return;
     }
+
+    if (programLoaded)
+        uiState = UiState::Ready;             // clears a sticky "halted by error" state
     refresh();
 }
 
@@ -521,19 +600,27 @@ void MainWindow::onEditRejected(const QString& reason)
 
 void MainWindow::onBreakpointToggled(uint8_t address, bool enabled)
 {
-    if (enabled) breakpoints.insert(address);
-    else         breakpoints.erase(address);
-
-    statusBar()->showMessage(QString("Breakpoint %1 at %2")
-                                 .arg(enabled ? "set" : "removed")
-                                 .arg(GuiUtil::hexByte(address)), 3000);
+    if (enabled)
+        breakpoints.insert(address);
+    else
+        breakpoints.erase(address);
 }
 
-/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/
+// ============================================================================
+// view / help
+// ============================================================================
 
 void MainWindow::onDisplayBaseSelected(QAction* action)
 {
-    displayBase = static_cast<DisplayBase>(action->data().toInt());
+    if (!action)
+        return;
+
+    switch (action->data().toInt()) {
+    case static_cast<int>(DisplayBase::Decimal): displayBase = DisplayBase::Decimal; break;
+    case static_cast<int>(DisplayBase::Binary):  displayBase = DisplayBase::Binary;  break;
+    default:                                     displayBase = DisplayBase::Hex;     break;
+    }
+
     memoryPanel->setDisplayBase(displayBase);
     registerPanel->setDisplayBase(displayBase);
     refresh();
@@ -542,7 +629,7 @@ void MainWindow::onDisplayBaseSelected(QAction* action)
 void MainWindow::onThemeToggled(bool dark)
 {
     ThemeManager::apply(dark ? Theme::Dark : Theme::Light);
-    refresh();   // highlight colors depend on the theme
+    refresh();                                 // repaint highlight colors
 }
 
 void MainWindow::onShowInstructionSet()
@@ -553,35 +640,47 @@ void MainWindow::onShowInstructionSet()
 
 void MainWindow::onAbout()
 {
-    QMessageBox::about(this, "About",
-        "Vole Machine Simulator\n"
-        "CS213 - Assignment 2\n"
-        "Faculty of Computers and Artificial Intelligence, Cairo University");
+    QMessageBox::about(this, "About Vole Machine Simulator",
+        "<b>Vole Machine Simulator</b><br>"
+        "A step-by-step simulator of the Vole machine language.<br><br>"
+        "Shortcuts: F10 step, F5 run all, F6 run/pause, Ctrl+R reset.<br>"
+        "Click the first column of the program list to set a breakpoint; "
+        "double-click a row to move the PC there.");
 }
 
-/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/
+// ============================================================================
+// display
+// ============================================================================
 
 void MainWindow::refresh()
 {
     const Cpu& cpu = machine.getCpu();
-    const uint8_t highlight = addressToHighlight(machine);
+    const uint8_t pc = cpu.getProgramCounter();
 
-    memoryPanel->showMemory(machine.getMemory(), highlight, before);
+    memoryPanel->showMemory(machine.getMemory(), pc, before);
     registerPanel->showRegisters(cpu, before);
     screenPanel->showOutput(machine.getScreen().getOutput());
 
-    if (programLoaded) programList->showProgram(machine, loadedStart, loadedWords, highlight);
-    else               programList->clearProgram();
+    programList->setBreakpoints(breakpoints);
+    if (programLoaded)
+        programList->showProgram(machine, loadedStart, loadedWords, pc);
+    else
+        programList->clearProgram();
 
     updateUiState();
+    updateStatusBar();
 }
 
 void MainWindow::updateUiState()
 {
-    if (runTimer.isActive())                    uiState = UiState::Running;
-    else if (!programLoaded)                    uiState = UiState::NoProgram;
-    else if (machine.getCpu().isHalted())       uiState = UiState::Halted;
-    else                                        uiState = UiState::Ready;
+    if (!programLoaded)
+        uiState = UiState::NoProgram;
+    else if (runTimer.isActive())
+        uiState = UiState::Running;
+    else if (machine.getCpu().isHalted() || uiState == UiState::Halted)
+        uiState = UiState::Halted;
+    else
+        uiState = UiState::Ready;
 
     controlBar->setUiState(uiState);
 
@@ -592,64 +691,81 @@ void MainWindow::updateUiState()
     stepAction->setEnabled(uiState == UiState::Ready);
     runAllAction->setEnabled(uiState == UiState::Ready);
     runAction->setEnabled(uiState == UiState::Ready || uiState == UiState::Running);
-    restartAction->setEnabled(programLoaded && uiState != UiState::Running);
+    runAction->setText(uiState == UiState::Running ? "&Pause" : "&Run / Pause");
+    restartAction->setEnabled(uiState == UiState::Ready || uiState == UiState::Halted);
     resetAction->setEnabled(true);
-
-    updateStatusBar();
 }
 
 void MainWindow::updateStatusBar()
 {
+    QString state;
     switch (uiState) {
-    case UiState::NoProgram: stateLabel->setText("No program loaded"); break;
-    case UiState::Ready:     stateLabel->setText("Ready");             break;
-    case UiState::Running:   stateLabel->setText("Running...");        break;
-    case UiState::Halted:    stateLabel->setText("Halted");            break;
+    case UiState::NoProgram: state = "No program"; break;
+    case UiState::Ready:     state = "Ready";      break;
+    case UiState::Running:   state = "Running";    break;
+    case UiState::Halted:    state = "Halted";     break;
     }
+    stateLabel->setText(QString("  %1  ").arg(state));
+    pcLabel->setText(QString("  PC: %1  ")
+                         .arg(GuiUtil::hexByte(machine.getCpu().getProgramCounter())));
+    stepsLabel->setText(stepCount >= 0 ? QString("  Steps: %1  ").arg(stepCount)
+                                       : QString("  Steps: n/a  "));
 
-    pcLabel->setText("PC: " + GuiUtil::hexByte(machine.getCpu().getProgramCounter()));
-    stepsLabel->setText(stepCount >= 0 ? QString("Steps: %1").arg(stepCount)
-                                       : QString("Steps: -"));
+    if (programLoaded && !currentFilePath.isEmpty())
+        setWindowTitle(QString("Vole Machine Simulator - %1").arg(QFileInfo(currentFilePath).fileName()));
+    else
+        setWindowTitle("Vole Machine Simulator");
 }
 
 void MainWindow::showMessage(const StatusMessage& message)
 {
     statusBar()->showMessage(message.text, 8000);
 
-    if (!message.showDialog) return;
+    if (!message.showDialog)
+        return;
 
     switch (message.severity) {
-    case MessageSeverity::Error:
-        QMessageBox::critical(this, "Vole Simulator", message.text);
+    case MessageSeverity::Info:
+        QMessageBox::information(this, "Vole", message.text);
         break;
     case MessageSeverity::Warning:
-        QMessageBox::warning(this, "Vole Simulator", message.text);
+        QMessageBox::warning(this, "Vole", message.text);
         break;
-    case MessageSeverity::Info:
-        QMessageBox::information(this, "Vole Simulator", message.text);
+    case MessageSeverity::Error:
+        QMessageBox::critical(this, "Vole", message.text);
         break;
     }
 }
 
-/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/*/
+// ============================================================================
+// drag & drop, close
+// ============================================================================
 
-void MainWindow::addRecentFile(const QString& path)
+void MainWindow::dragEnterEvent(QDragEnterEvent* event)
 {
-    recentFiles.removeAll(path);
-    recentFiles.prepend(path);
-    while (recentFiles.size() > kMaxRecentFiles) recentFiles.removeLast();
-    rebuildRecentMenu();
+    const QMimeData* mime = event->mimeData();
+    if (mime && mime->hasUrls() && !mime->urls().isEmpty()
+        && mime->urls().first().isLocalFile())
+        event->acceptProposedAction();
 }
 
-void MainWindow::rebuildRecentMenu()
+void MainWindow::dropEvent(QDropEvent* event)
 {
-    recentMenu->clear();
+    const QMimeData* mime = event->mimeData();
+    if (!mime || !mime->hasUrls() || mime->urls().isEmpty())
+        return;
 
-    for (const QString& path : recentFiles) {
-        QAction* action = recentMenu->addAction(QFileInfo(path).fileName());
-        action->setData(path);
-        action->setToolTip(path);
-        connect(action, &QAction::triggered, this, &MainWindow::onOpenRecent);
-    }
-    recentMenu->setEnabled(!recentFiles.isEmpty());
+    const QString path = mime->urls().first().toLocalFile();
+    if (path.isEmpty())
+        return;
+
+    event->acceptProposedAction();
+    openProgram(path);
+}
+
+void MainWindow::closeEvent(QCloseEvent* event)
+{
+    runTimer.stop();
+    saveSettings();
+    QMainWindow::closeEvent(event);
 }

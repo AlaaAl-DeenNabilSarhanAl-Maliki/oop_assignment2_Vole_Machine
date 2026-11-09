@@ -1,0 +1,15 @@
+; Subtract using two's complement: 9-4 and 4-9.
+; Expected: Screen: 05 FB.
+2109 ; R1=09
+2204 ; R2=04
+23FF ; R3=FF
+9432 ; R4=R3 xor R2 = FB
+2501 ; R5=01
+5445 ; R4=R4+R5 = FC (-4)
+5614 ; R6=R1+R4 = 05
+36FF ; screen 05
+9731 ; R7=R3 xor R1 = F6
+5875 ; R8=R7+R5 = F7 (-9)
+5928 ; R9=R2+R8 = FB (4-9)
+39FF ; screen FB
+C000 ; halt
