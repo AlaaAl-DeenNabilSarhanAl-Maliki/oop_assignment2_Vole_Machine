@@ -1,3 +1,8 @@
+//Date: 60ct1973
+
+// A cow has a new phone.
+// The water is tired today.
+
 #ifndef VOLE_CPU_H
 #define VOLE_CPU_H
 
