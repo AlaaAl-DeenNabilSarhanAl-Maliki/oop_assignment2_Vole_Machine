@@ -1,6 +1,6 @@
-file(GLOB CLI_SRC CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
+file(GLOB CLI_SOURCES CONFIGURE_DEPENDS src/*.cpp)
+file(GLOB CLI_HEADERS CONFIGURE_DEPENDS Include/*.h)
 
-# add_executable(vole_cli main.cpp ${CLI_SRC})
-
-# target_include_directories(vole_cli PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
-# target_link_libraries(vole_cli PRIVATE VoleCore) 
+add_executable(vole_console ${CLI_SOURCES} ${CLI_HEADERS})
+target_include_directories(vole_console PRIVATE Include)
+target_link_libraries(vole_console PRIVATE vole_core)

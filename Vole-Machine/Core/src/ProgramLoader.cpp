@@ -1,10 +1,6 @@
 #include "ProgramLoader.h"
-<<<<<<< HEAD
 #include "Common.h"
-#include "Memory.h"
-=======
-#include "Machine.h"
->>>>>>> 9745b791b470c8b89481486ba49da46baf7d4a08
+#include "../include/Memory.h"
 #include "InstructionDecoder.h"
 #include <fstream>
 #include <sstream>

@@ -1,4 +1,9 @@
 {
     "cmake.sourceDirectory": "${workspaceFolder}/Vole-Machine",
-    "cmake.generator": "MinGW Makefiles"
+    "cmake.generator": "MinGW Makefiles",
+    "cmake.buildDirectory": "${workspaceFolder}/build",
+    "cmake.configureSettings": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+    },
+    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
 }
