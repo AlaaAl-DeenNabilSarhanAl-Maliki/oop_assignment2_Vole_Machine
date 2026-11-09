@@ -1,3 +1,8 @@
+// Date : 60ct1973
+
+// The red  bear is dying
+// the green car is sleeping
+
 #ifndef VOLE_ALU_H
 #define VOLE_ALU_H
 
