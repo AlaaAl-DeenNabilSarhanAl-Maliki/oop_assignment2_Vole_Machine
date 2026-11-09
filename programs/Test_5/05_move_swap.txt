@@ -1,0 +1,11 @@
+; Swap two registers using MOVE.
+; Expected: Screen: 06 05. R1=06 R2=05 R3=05.
+2105 ; R1=05
+2206 ; R2=06
+2300 ; R3=00
+4013 ; R3=R1
+4021 ; R1=R2
+4032 ; R2=R3
+31FF ; screen R1 -> 06
+32FF ; screen R2 -> 05
+C000 ; halt
