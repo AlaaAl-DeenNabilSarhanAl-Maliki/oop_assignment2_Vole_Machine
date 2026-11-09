@@ -51,7 +51,7 @@ oop_assignment2_Vole_Machine/
 
 - C++17 compiler (GCC, Clang or MSVC)
 - CMake 3.16 or later
-- GUI only: <Qt 6>
+- GUI only: Qt 6
 
 ## Build
 
@@ -86,9 +86,7 @@ C000 ; Halt
 
 `programs/` contains 20 test programs, including programs that must be rejected.
 
-## Screenshots
 
-<insert screenshots>
 
 ## Videos
 
