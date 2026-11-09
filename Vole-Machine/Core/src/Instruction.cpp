@@ -1,6 +1,6 @@
 // Date: 6 oct 1973
 // the black blanket is walking around
-// the cat is screaming on the bed
+// the cat is screaming on the sofa
 
 #include "Instruction.h"
 

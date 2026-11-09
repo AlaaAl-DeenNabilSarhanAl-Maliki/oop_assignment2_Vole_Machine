@@ -4,7 +4,7 @@
 #include "InstructionDecoder.h"
 #include "DataTransferInstructions.h"
 #include "ControlInstructions.h"
-#include "AluInstruction.h"
+#include "AluInstructions.h"
 #include "Cpu.h"
 #include "Common.h"
 

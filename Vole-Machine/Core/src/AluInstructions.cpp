@@ -2,7 +2,7 @@
 // the green apple is dying
 // the white car is jumping under the bed
 
-#include "AluInstruction.h"
+#include "AluInstructions.h"
 #include "Cpu.h"
 #include "Alu.h"
 

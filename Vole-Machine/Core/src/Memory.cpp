@@ -1,6 +1,5 @@
 
-//Date: 60ct1973
-
+// Date: 6 oct 1973
 
 // My pen is very sleepy.
 // The door is singing a song.
@@ -8,22 +7,17 @@
 #include "Memory.h"
 #include "Screen.h"
 
-
 //*/*/*/*/*......
 Memory::Memory(Screen &screen)
     : screen(screen)
 {
 }
 
-
-
-
 //*/*/*/*/*......
 bool Memory::isEvenAddress(int address)
 {
     return address % 2 == 0;
 }
-
 
 //*/*/*/*/*......
 
@@ -37,7 +31,6 @@ bool Memory::fits(int start, int byteCount)
     return start + byteCount - 1 < 255;
 }
 
-
 //*/*/*/*/*......
 
 void Memory::write(uint8_t address, uint8_t value)
@@ -48,7 +41,6 @@ void Memory::write(uint8_t address, uint8_t value)
         cells[address] = value;
 }
 
-
 //*/*/*/*/*......
 
 uint8_t Memory::read(uint8_t address) const
@@ -58,8 +50,6 @@ uint8_t Memory::read(uint8_t address) const
 
     return cells[address];
 }
-
-
 
 //*/*/*/*/*......
 
@@ -75,7 +65,6 @@ bool Memory::loadBytes(int start, const std::vector<uint8_t> &bytes)
 
     return true;
 }
-
 
 //*/*/*/*/*......
 
