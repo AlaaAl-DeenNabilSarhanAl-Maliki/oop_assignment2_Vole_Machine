@@ -1,0 +1,11 @@
+;;1)Abdelrhman Ayman Abdelnaby(20250354),2)Mohamed Mokhtar Mohamed (20251350),3)Belal ahmed abo Elela(20250120),4)Albaraa Mohamed Abdelsalam(20250086)
+; Vole Machine Program 1
+; Purpose: Load two numbers (3 and 4), add them, and display the result (7) on the screen.
+;-----------------------------------------------------------------------------------------
+
+
+2003   ; Load immediate value 03 into register 0
+2104   ; Load immediate value 04 into register 1
+5201   ; Add registers 0 and 1, put result in register 2
+32FF   ; Store register 2 into memory[FF] (screen output)
+C000   ; Halt
