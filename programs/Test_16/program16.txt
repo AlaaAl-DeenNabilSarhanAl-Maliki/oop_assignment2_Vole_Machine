@@ -1,0 +1,24 @@
+; ------------------------------------------------------------
+; Example Vole Machine Program 2
+; Purpose:
+; 1. Load two numbers(4 and 3)
+; 2. Multiply the two numbers using repeated addition → result = 12
+; 3. Output the result(12) to the screen
+; 4. Halt
+; ------------------------------------------------------------
+
+2000; Load immediate value 00 into register 0 (zero for comparison)
+2104; Load immediate value 04 into register 1 (number to add)
+2203; Load immediate value 03 into register 2 (loop counter)
+2300; Load immediate value 00 into register 3 (result)
+24FF; Load immediate value FF into register 4 (-1 in two's complement)
+
+; --- Loop Start---
+B212; Branch to address 12 if registers 2 and 0 are equal
+5331; Add registers 3 and 1, storing the result in register 3
+5224; Decrement register 2 by 1
+B00A; Jump back to address 0A
+
+; --- Loop End---
+33FF; Store register 3 into memory[FF](screen output : 0C)
+C000; Halt
