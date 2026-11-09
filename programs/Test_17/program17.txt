@@ -1,0 +1,16 @@
+;-----------------------------------------------------------------------------
+; Vole Machine Program
+; Purpose : Checks if the number is even or odd and prints E (even) or 0 (odd)
+;-----------------------------------------------------------------------------
+
+2000 ; Load 00 into register 0 (for comparison)
+210B ; Load OB into register 1 (number to test)
+2201 ; Load 01 into register 2 (mask)
+8312 ; AND registers 1 and 2, put result in register 3 (lowest bit)
+B310 ; Jump If register 3 = register 0 (even), jump to address 10
+244F ; Load 4F ('0') into register 4
+34FF ; Display register 4 (screen output)
+CO00 ; Halt
+2445 ; (address 10) Load 45 ('E') into register 4
+34FF ; Display register 4 (screen output)
+CO00 ; Halt
