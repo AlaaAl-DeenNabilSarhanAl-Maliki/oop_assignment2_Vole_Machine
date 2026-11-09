@@ -1,0 +1,12 @@
+; Multiply 4*3 by repeated addition (R3 += R1, three times) and print 12
+2000
+2104
+2203
+2300
+24FF
+B212
+5331
+5224
+B00A
+33FF
+C000
