@@ -1,0 +1,15 @@
+//Vole Machine Sample program 1
+;Vole Machine Program
+;Purpose:
+;Load two numbers (8 and 9), and perform bitwise OR
+;Display the result (9) on the screen
+;--------------------------------------------
+;1. Load two numbers (8 and 9)
+2008;Load hexadecimal 08 into register 0
+2109;Load hexadecimal 09 into register 1
+;2. OR the two numbers
+7201;OR contents of register 0 and register 1 and put result into register 2
+;3. Store the result in memory [FF] (screen output)
+32FF;Store register 2 into memory [FF] (screen output)
+;4. Halt
+C000;Halt program execution

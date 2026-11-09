@@ -1,0 +1,14 @@
+; Sample Program 1
+; Performs arithmetic and logic operations, then prints 0F on the screen
+200A ; Loading (0A) to register 0
+2105 ; Loading (05) to register 1
+5201 ; Adding R0 and R1, putting the result in register 2
+32F0 ; Storing register 2 into memory F0
+2303 ; Loading (03) to register 3
+8423 ; Bitwise AND between R2 and R3, result in register 4
+34F1 ; Storing register 4 into memory F1
+2502 ; Loading (02) to register 5
+5625 ; Adding R2 and R5, putting the result in register 6
+36F2 ; Storing register 6 into memory F2
+32FF ; Storing register 2 into FF (screen output)
+C000 ; Halting the program
