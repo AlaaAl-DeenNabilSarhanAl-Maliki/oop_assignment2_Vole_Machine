@@ -1,0 +1,11 @@
+; 1 Abdelrhman Ayman Abdelnaby(20250354),2Mohamed Mokhtar Mohamed (20251350),3 Belal ahmed abo Elela(20250120),4)Albaraa Mohamed Abdelsalam(20250086)
+; Vole Machine Program 2
+; Purpose: Load values into registers, perform OR operation, and display result on screen.
+; ----------------------------------------------------------------------------------------------
+
+
+200F ; Load immediate value 0F into register 0
+2130 ; Load immediate value 30 into register 1
+7201 ; OR the bit patterns in registers 0 and 1, and place result in register 2
+32FF ; Store register 2 into screen memory mapping (FF) (screen output)
+C000 ; Halt
