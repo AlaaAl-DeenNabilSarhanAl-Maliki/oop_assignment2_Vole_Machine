@@ -1,0 +1,16 @@
+; Vole Machine Program
+; purpose: Multiplying the two numbers (4) and (3) using repeated addition,
+; and display the result (12) on the screen.
+
+
+2003  ;step 00=> Load immediate value 03 into register 0 => counter
+2104  ;step 02=> Load immediate value 04 into register 1
+2200  ;step 04=> result 
+23FF  ;step 06=> -1
+2400  ;step 08=> comparison
+B412  ;step 0A=> go to step 12 if R4=R0
+5221  ;step 0C=> add R1 and R2 then put it in R2
+5003  ;step 0E=> to decrease counter by 1 
+B00A  ;step 10=> jump back to the loop
+32FF  ;step 12=> display
+C000  ;step 14=> Exit
