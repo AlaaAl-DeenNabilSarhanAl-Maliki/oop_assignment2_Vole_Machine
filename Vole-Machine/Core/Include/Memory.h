@@ -1,3 +1,8 @@
+//Date: 60ct1973
+
+// A bird sells blue chairs.
+// The bed is running fast.
+
 #ifndef VOLE_MEMORY_H
 #define VOLE_MEMORY_H
 
