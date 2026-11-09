@@ -7,3 +7,4 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_subdirectory(Core)
 add_subdirectory(GUI)
+add_subdirectory(CLI)
