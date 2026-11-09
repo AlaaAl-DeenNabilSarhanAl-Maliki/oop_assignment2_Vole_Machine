@@ -1,0 +1,22 @@
+; AND mask test/clear bits, OR, XOR.
+; Expected: Screen: 04 00 FF 55 29.
+202D ; R0=2D (00101101)
+2104 ; R1=04
+8201 ; R2=R0 and R1 = 04
+32FF ; screen 04 (bit 2 is set)
+2310 ; R3=10
+8403 ; R4=R0 and R3 = 00
+34FF ; screen 00 (bit 4 not set)
+25F0 ; R5=F0
+260F ; R6=0F
+7756 ; R7=R5 or R6 = FF
+37FF ; screen FF
+28AA ; R8=AA
+29FF ; R9=FF
+9A89 ; RA=R8 xor R9 = 55
+3AFF ; screen 55
+2B2D ; RB=2D
+2CFB ; RC=FB (mask)
+8DBC ; RD=RB and RC = 29 (bit 2 cleared)
+3DFF ; screen 29
+C000 ; halt
