@@ -1,3 +1,7 @@
+// Date: 6 oct 1973
+// the green dog is sleeping
+// the white car is jumping under the bed
+
 #include "ConsoleView.h"
 #include "Machine.h"
 #include <iostream>
@@ -11,7 +15,7 @@ std::string ConsoleView::toHex(int value, int digits)
     ss << std::uppercase << std::setfill('0') << std::setw(digits) << std::hex << value;
     return ss.str();
 }
-
+///*/*/*/*
 void ConsoleView::showMemory(const Memory &memory)
 {
 
@@ -42,7 +46,7 @@ void ConsoleView::showMemory(const Memory &memory)
     }
     std::cout << "----------------------\n";
 }
-
+///*/*/*/*
 void ConsoleView::showScreen(const Screen &screen)
 {
 
@@ -65,7 +69,7 @@ void ConsoleView::showScreen(const Screen &screen)
 
     std::cout << "\n---------------------\n";
 }
-
+///*/*/*/*
 void ConsoleView::showRegisters(const Cpu &cpu)
 {
     std::cout << "--- CPU Registers ---\n";
@@ -82,7 +86,7 @@ void ConsoleView::showRegisters(const Cpu &cpu)
     }
     std::cout << "---------------------\n";
 }
-
+///*/*/*/*
 void ConsoleView::showState(const Machine &machine)
 {
     std::cout << "\n================ MACHINE STATE ================\n";
@@ -95,7 +99,7 @@ void ConsoleView::showState(const Machine &machine)
 
     std::cout << "===============================================\n\n";
 }
-
+///*/*/*/*
 void ConsoleView::showStatus(StepStatus status)
 {
     std::cout << "[Step Status]: ";
@@ -118,7 +122,7 @@ void ConsoleView::showStatus(StepStatus status)
         break;
     }
 }
-
+///*/*/*/*
 void ConsoleView::showLoadResult(const LoadResult &result)
 {
     std::cout << "\n[Load Result]: ";
