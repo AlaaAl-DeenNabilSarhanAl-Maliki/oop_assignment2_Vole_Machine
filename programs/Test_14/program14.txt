@@ -1,0 +1,22 @@
+; ==========================================
+; Program 1: Addition Program
+; Purpose: Load two numbers (7 and 7), add them,
+; and store the result (14) in memory address 00.
+; ==========================================
+2007 ; Load immediate value 07 into register R0
+2107 ; Load immediate value 07 into register R1
+5201 ; Add R0 and R1, put result in R2
+3200 ; Store register R2 into memory address 00
+c000 ; Halt Program execution
+
+
+; ==========================================
+; Program 2: Bitwise AND Program
+; Purpose: Perform Bitwise AND between two values (0F and A5)
+; and store the result in memory address 10.
+; ==========================================
+200f ; Load immediate value 0F into register R0
+21a5 ; Load immediate value A5 into register R1
+8201 ; Bitwise AND R0 and R1, put result in R2
+3210 ; Store register R2 into memory address 10
+c000 ; Halt Program execution
