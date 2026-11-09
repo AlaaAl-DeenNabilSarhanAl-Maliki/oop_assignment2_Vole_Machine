@@ -51,6 +51,7 @@ MainWindow::MainWindow(QWidget* parent)
     connectSignals();
 
     runTimer.setSingleShot(false);
+    runTimer.setTimerType(Qt::PreciseTimer);   // steadier ticks than the default coarse timer
     runTimer.setInterval(controlBar->stepDelayMs());
 
     before = MachineSnapshot::take(machine);
@@ -719,6 +720,20 @@ void MainWindow::updateStatusBar()
 
 void MainWindow::showMessage(const StatusMessage& message)
 {
+    // ---- colors by severity: edit these to taste ----
+    QString style;
+    switch (message.severity) {
+    case MessageSeverity::Error:
+        style = "QStatusBar { background-color: #C62828; color: white; font-weight: bold; }";
+        break;
+    case MessageSeverity::Warning:
+        style = "QStatusBar { background-color: #F9A825; color: black; font-weight: bold; }";
+        break;
+    case MessageSeverity::Info:
+        style = QString();   // default look
+        break;
+    }
+    statusBar()->setStyleSheet(style);
     statusBar()->showMessage(message.text, 8000);
 
     if (!message.showDialog)

@@ -67,14 +67,20 @@ void MemoryPanel::showMemory(const Memory& memory,
     for (int address = 0; address < 256; ++address) {
         const uint8_t a = static_cast<uint8_t>(address);
         const uint8_t value = memory.read(a);
+        const bool valueChanged = (shownValues[address] != value);
         shownValues[address] = value;
 
         QTableWidgetItem* it = item(rowOf(a), columnOf(a));
         if (!it)
             continue;
 
-        it->setText(GuiUtil::formatByte(value, base));
-        it->setToolTip(tooltipFor(a, value));
+        // Touch the item only when something really changed: this runs on every
+        // animated step, and 256 unconditional updates make the animation stutter.
+        const QString text = GuiUtil::formatByte(value, base);
+        if (it->text() != text)
+            it->setText(text);
+        if (valueChanged)
+            it->setToolTip(tooltipFor(a, value));
 
         const bool isPc = (address == pc) || (address == pc + 1);
         const bool isChanged = before.memory[address] != value;
@@ -127,12 +133,19 @@ void MemoryPanel::styleCell(QTableWidgetItem* item, uint8_t address,
     else if (address == Memory::screenAddress)
         background = colors.screenCell;
 
-    item->setBackground(QBrush(background));
-    item->setForeground(QBrush(colors.text));
+    const QBrush backgroundBrush(background);
+    const QBrush textBrush(colors.text);
 
-    QFont f = item->font();
-    f.setBold(isPc);
-    item->setFont(f);
+    if (item->background() != backgroundBrush)
+        item->setBackground(backgroundBrush);
+    if (item->foreground() != textBrush)
+        item->setForeground(textBrush);
+
+    if (item->font().bold() != isPc) {
+        QFont f = item->font();
+        f.setBold(isPc);
+        item->setFont(f);
+    }
 }
 
 QString MemoryPanel::tooltipFor(uint8_t address, uint8_t value) const

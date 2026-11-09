@@ -10,17 +10,18 @@
 #include <QSignalBlocker>
 #include <QSlider>
 
-namespace
-{
+namespace {
 
-    // Slider position -> delay between steps. Left = slow, right = fast.
-    constexpr int kDelays[] = {1000, 500, 250, 100, 50, 20, 5};
-    constexpr int kDelayCount = static_cast<int>(sizeof(kDelays) / sizeof(kDelays[0]));
-    constexpr int kDefaultSlider = 2; // 250 ms/step
+// Slider position -> delay between steps. Left = slow, right = fast.
+// The fastest value is ~one screen frame (60 Hz): anything quicker executes several
+// steps between two repaints, so the highlight appears to jump.
+constexpr int kDelays[] = {1000, 500, 250, 100, 50, 30, 16};
+constexpr int kDelayCount = static_cast<int>(sizeof(kDelays) / sizeof(kDelays[0]));
+constexpr int kDefaultSlider = 2;   // 250 ms/step
 
 } // namespace
 
-ControlBar::ControlBar(QWidget *parent)
+ControlBar::ControlBar(QWidget* parent)
     : QWidget(parent)
 {
     buildUi();
@@ -29,16 +30,14 @@ ControlBar::ControlBar(QWidget *parent)
 
 int ControlBar::delayForSlider(int sliderValue)
 {
-    if (sliderValue < 0)
-        sliderValue = 0;
-    if (sliderValue >= kDelayCount)
-        sliderValue = kDelayCount - 1;
+    if (sliderValue < 0) sliderValue = 0;
+    if (sliderValue >= kDelayCount) sliderValue = kDelayCount - 1;
     return kDelays[sliderValue];
 }
 
 void ControlBar::buildUi()
 {
-    auto *layout = new QHBoxLayout(this);
+    auto* layout = new QHBoxLayout(this);
     layout->setContentsMargins(6, 4, 6, 4);
     layout->setSpacing(6);
 
@@ -97,13 +96,13 @@ void ControlBar::buildUi()
     resetButton->setToolTip("Clear memory, registers and screen (Ctrl+R)");
     layout->addWidget(resetButton);
 
-    connect(loadButton, &QPushButton::clicked, this, &ControlBar::loadClicked);
-    connect(stepButton, &QPushButton::clicked, this, &ControlBar::stepClicked);
-    connect(runAllButton, &QPushButton::clicked, this, &ControlBar::runAllClicked);
+    connect(loadButton,    &QPushButton::clicked, this, &ControlBar::loadClicked);
+    connect(stepButton,    &QPushButton::clicked, this, &ControlBar::stepClicked);
+    connect(runAllButton,  &QPushButton::clicked, this, &ControlBar::runAllClicked);
     connect(restartButton, &QPushButton::clicked, this, &ControlBar::restartClicked);
-    connect(resetButton, &QPushButton::clicked, this, &ControlBar::resetClicked);
-    connect(runButton, &QPushButton::toggled, this, &ControlBar::onRunButtonToggled);
-    connect(speedSlider, &QSlider::valueChanged, this, &ControlBar::onSliderChanged);
+    connect(resetButton,   &QPushButton::clicked, this, &ControlBar::resetClicked);
+    connect(runButton,     &QPushButton::toggled, this, &ControlBar::onRunButtonToggled);
+    connect(speedSlider,   &QSlider::valueChanged, this, &ControlBar::onSliderChanged);
 }
 
 std::optional<int> ControlBar::startAddress() const
@@ -132,28 +131,18 @@ void ControlBar::setUiState(UiState state)
     bool run = false, restart = false, reset = true;
     bool running = false;
 
-    switch (state)
-    {
+    switch (state) {
     case UiState::NoProgram:
-        load = true;
-        start = true;
+        load = true; start = true;
         break;
     case UiState::Ready:
-        load = true;
-        start = true;
-        step = true;
-        runAll = true;
-        run = true;
-        restart = true;
+        load = true; start = true; step = true; runAll = true; run = true; restart = true;
         break;
     case UiState::Running:
-        run = true;
-        running = true;
+        run = true; running = true;
         break;
     case UiState::Halted:
-        load = true;
-        start = true;
-        restart = true;
+        load = true; start = true; restart = true;
         break;
     }
 

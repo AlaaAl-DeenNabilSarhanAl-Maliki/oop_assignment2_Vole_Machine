@@ -73,30 +73,47 @@ void ProgramListPanel::showProgram(const Machine& machine,
         ++count;
     }
 
+    // Rebuild the rows only when the shape of the list changed. During an animated
+    // run only the PC row moves, so we just update the cells that differ.
+    const bool structureChanged = (count != rowCountShown) || (startAddress != firstAddress);
     firstAddress = startAddress;
     rowCountShown = count;
-    setRowCount(count);
+    if (structureChanged) {
+        setRowCount(0);
+        setRowCount(count);
+    }
+
+    auto put = [this](int row, int col, const QString& text, bool centered) {
+        QTableWidgetItem* it = item(row, col);
+        if (!it) {
+            it = new QTableWidgetItem(text);
+            it->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+            if (centered)
+                it->setTextAlignment(Qt::AlignCenter);
+            setItem(row, col, it);
+        } else if (it->text() != text) {
+            it->setText(text);
+        }
+    };
+
+    const HighlightColors colors = ThemeManager::colors();
 
     for (int row = 0; row < count; ++row) {
         const uint8_t address = addressOfRow(row);
         const uint16_t word = static_cast<uint16_t>(
             (memory.read(address) << 8) | memory.read(static_cast<uint8_t>(address + 1)));
 
-        auto makeItem = [](const QString& text) {
-            auto* item = new QTableWidgetItem(text);
-            item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
-            return item;
-        };
+        put(row, ColBreakpoint, breakpoints.count(address) ? kBreakpointGlyph : QString(), true);
+        put(row, ColAddress, GuiUtil::hexByte(address), false);
+        put(row, ColWord, GuiUtil::formatWord(word), false);
+        put(row, ColDescription,
+            QString::fromStdString(InstructionDescriber::describe(word)), false);
 
-        QTableWidgetItem* bp = makeItem(breakpoints.count(address) ? kBreakpointGlyph : QString());
-        bp->setTextAlignment(Qt::AlignCenter);
-        setItem(row, ColBreakpoint, bp);
-        setItem(row, ColAddress, makeItem(GuiUtil::hexByte(address)));
-        setItem(row, ColWord, makeItem(GuiUtil::formatWord(word)));
-        setItem(row, ColDescription,
-                makeItem(QString::fromStdString(InstructionDescriber::describe(word))));
-
-        styleRow(row, address == programCounter);
+        const bool isPc = (address == programCounter);
+        const QTableWidgetItem* marker = item(row, ColAddress);
+        const QColor wanted = isPc ? colors.programCounter : colors.background;
+        if (marker->background().color() != wanted || marker->font().bold() != isPc)
+            styleRow(row, isPc);
     }
 
     const int pcRow = rowOfAddress(programCounter);
@@ -108,8 +125,11 @@ void ProgramListPanel::setBreakpoints(const std::set<uint8_t>& newBreakpoints)
 {
     breakpoints = newBreakpoints;
     for (int row = 0; row < rowCountShown; ++row) {
-        if (QTableWidgetItem* bp = item(row, ColBreakpoint))
-            bp->setText(breakpoints.count(addressOfRow(row)) ? kBreakpointGlyph : QString());
+        if (QTableWidgetItem* bp = item(row, ColBreakpoint)) {
+            const QString text = breakpoints.count(addressOfRow(row)) ? kBreakpointGlyph : QString();
+            if (bp->text() != text)
+                bp->setText(text);
+        }
     }
 }
 

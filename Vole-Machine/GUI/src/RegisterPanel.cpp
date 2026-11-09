@@ -106,17 +106,24 @@ void RegisterPanel::showRegisters(const Cpu& cpu, const MachineSnapshot& before)
     for (int i = 0; i < 16; ++i) {
         const uint8_t value = cpu.readRegister(static_cast<uint8_t>(i));
         shownValues[i] = value;
-        registerEdits[i]->setText(GuiUtil::formatByte(value, base));
+        const QString text = GuiUtil::formatByte(value, base);
+        if (registerEdits[i]->text() != text)
+            registerEdits[i]->setText(text);
         markEdit(registerEdits[i], before.registers[i] != value);
     }
 
     shownPc = cpu.getProgramCounter();
-    pcEdit->setText(GuiUtil::hexByte(shownPc));
+    const QString pcText = GuiUtil::hexByte(shownPc);
+    if (pcEdit->text() != pcText)
+        pcEdit->setText(pcText);
     markEdit(pcEdit, before.programCounter != shownPc);
 
     const uint16_t ir = cpu.getInstructionRegister();
-    irEdit->setText(GuiUtil::formatWord(ir));
-    irDescription->setText(QString::fromStdString(InstructionDescriber::describe(ir)));
+    const QString irText = GuiUtil::formatWord(ir);
+    if (irEdit->text() != irText) {
+        irEdit->setText(irText);
+        irDescription->setText(QString::fromStdString(InstructionDescriber::describe(ir)));
+    }
 
     refreshing = false;
 }
@@ -144,13 +151,15 @@ void RegisterPanel::setEditingEnabled(bool enabled)
 
 void RegisterPanel::markEdit(QLineEdit* edit, bool changed) const
 {
-    if (!changed) {
-        edit->setStyleSheet(QString());
-        return;
+    // Re-applying a stylesheet is expensive, so only do it when it actually differs.
+    QString style;
+    if (changed) {
+        const HighlightColors colors = ThemeManager::colors();
+        style = QString("QLineEdit { background-color: %1; color: %2; }")
+                    .arg(colors.changed.name(), colors.text.name());
     }
-    const HighlightColors colors = ThemeManager::colors();
-    edit->setStyleSheet(QString("QLineEdit { background-color: %1; color: %2; }")
-                            .arg(colors.changed.name(), colors.text.name()));
+    if (edit->styleSheet() != style)
+        edit->setStyleSheet(style);
 }
 
 int RegisterPanel::indexOfEditor(QObject* sender) const
