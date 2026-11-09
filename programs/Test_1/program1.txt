@@ -1,0 +1,16 @@
+; ------------------------------------------------------------
+; Vole Machine Program: Swap two registers
+; Purpose: put 05 in register 1 and 06 in register 2, then swap
+; their values using MOVE and register 3 as a temporary place.
+; Expected result: R1 = 06, R2 = 05
+; Load address: any even address (this program has no jumps)
+; ------------------------------------------------------------
+
+2105   ; R1 = 05
+2206   ; R2 = 06
+2300   ; R3 = 00 (temporary register)
+4013   ; MOVE R1 into R3 (save the old R1)
+4021   ; MOVE R2 into R1
+4032   ; MOVE R3 into R2 (move the saved old R1 to R2)
+2300   ; R3 = 00 (clear the temporary register)
+C000   ; HALT
