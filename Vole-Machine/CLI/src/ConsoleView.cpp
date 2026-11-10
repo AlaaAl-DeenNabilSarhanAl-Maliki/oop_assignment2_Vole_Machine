@@ -54,6 +54,13 @@ void ConsoleView::showScreen(const Screen &screen)
 
     const auto &output = screen.getOutput();
 
+    std::cout << "Hex:\n";
+    for (uint8_t val : output)
+    {
+        std::cout << toHex(val, 2) << " ";
+    }
+    std::cout << "\n\nASCII: (Invalid ascii or null will be replaced with \'.\')\n";
+
     for (uint8_t val : output)
     {
         if (val >= 32 && val <= 126)
